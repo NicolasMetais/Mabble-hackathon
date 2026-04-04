@@ -10,7 +10,7 @@ const Profil = () => {
       fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
       width: "100%",
       minHeight: "100vh",
-      background: "#f5f5f5",
+      background: "#ffffff",
       color: "#1a1a1a",
       margin: 0,
       padding: 0,

@@ -1,5 +1,5 @@
 import React from "react";
-import FooterApplyPage from "./FooterApplyPage";
+import FooterApplyPage from "../FooterApplyPage.jsx";
 import Header from "../Header.jsx";
 import { Link } from "react-router-dom";
 
@@ -37,7 +37,6 @@ export default function ApplyPage() {
           Skills are the new currency.
         </p>
       </div>
-      <FooterApplyPage />
     </div>
   );
 }

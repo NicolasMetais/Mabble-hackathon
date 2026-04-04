@@ -47,7 +47,7 @@ const Search = () => {
       fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
       width: "100%",
       minHeight: "100vh",
-      background: "#f5f5f5",
+      background: "#ffffff",
       color: "#1a1a1a",
       margin: 0,
       padding: 0,
@@ -217,7 +217,7 @@ const Search = () => {
     },
     cardBanner: {
       width: "100%",
-      height: 60,
+      height: 50,
       background: "linear-gradient(135deg, #6b6b6b, #999999)",
       position: "relative",
     },
@@ -233,7 +233,7 @@ const Search = () => {
       borderRadius: 6,
     },
     cardBody: {
-      padding: "12px 14px 14px 14px",
+      padding: "30px 14px 14px 14px",
     },
     cardAvatarRow: {
       display: "flex",
