@@ -7,6 +7,8 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './jwt.guard';
 import { UserModule } from './UserModule/user.module';
+import { PaymentModule } from './PaymentModule/payment.module';
+import { RequestsModule } from './RequestModule/requests.module';
 
 
 @Module({
@@ -15,6 +17,8 @@ import { UserModule } from './UserModule/user.module';
     DatabaseModule,
     AuthModule,
     UserModule,
+    PaymentModule,
+    RequestsModule,
     ConfigModule.forRoot({ isGlobal: true })
   ],
   providers: [

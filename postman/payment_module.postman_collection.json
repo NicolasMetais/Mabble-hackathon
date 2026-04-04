@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "Mabble Payment API",
+    "_postman_id": "mabble-payment-v1",
+    "description": "Collection de tests pour le PaymentModule NestJS.\n\nPré-requis : obtenir un JWT via POST /login, puis le coller dans la variable {{jwt}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:4000", "type": "string" },
+    { "key": "jwt", "value": "COLLER_LE_JWT_ICI", "type": "string" },
+    { "key": "request_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Auth — Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"deviceId\": \"device-abc\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1. Payment — Pay (JWT required)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}" }
+        ],
+        "url": "{{base_url}}/payment/pay",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userToken\": \"CIRCLE_USER_TOKEN\",\n  \"fromWalletAddress\": \"0xCLIENT_WALLET_ADDRESS\",\n  \"fromWalletID\": \"CIRCLE_WALLET_ID\",\n  \"to\": \"0xPROVIDER_WALLET_ADDRESS\",\n  \"USDCValue\": 10,\n  \"MBBLValue\": 0,\n  \"requestId\": {{request_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Payment — Dispute (JWT required)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{jwt}}" }
+        ],
+        "url": "{{base_url}}/payment/dispute",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userToken\": \"CIRCLE_USER_TOKEN\",\n  \"fromWalletId\": \"CIRCLE_WALLET_ID\",\n  \"paymentId\": 1,\n  \"solver0\": \"0xSOLVER_ADDRESS_0\",\n  \"solver1\": \"0xSOLVER_ADDRESS_1\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3. Internal — PaymentCreated (simule event.ts)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/payment/created",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"paymentID\": \"1\",\n  \"to\": \"0xPROVIDER_WALLET_ADDRESS\",\n  \"from\": \"0xCLIENT_WALLET_ADDRESS\",\n  \"amountMBBL\": \"0\",\n  \"amountUSDC\": \"10000000\",\n  \"releaseTimestamp\": \"9999999999\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Internal — ConflictResolved (simule event.ts)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/payment/conflictResolved",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"paymentID\": \"1\",\n  \"solver0\": \"0xSOLVER_ADDRESS_0\",\n  \"solver1\": \"0xSOLVER_ADDRESS_1\",\n  \"refundAddrees\": \"0xCLIENT_WALLET_ADDRESS\"\n}"
+        }
+      }
+    }
+  ]
+}

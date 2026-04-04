@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import FooterApplyPage from "../FooterApplyPage.jsx";
 import Header from "../Header.jsx";
-// import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk"
+import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk"
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 
