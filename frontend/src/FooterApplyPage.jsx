@@ -70,7 +70,7 @@ export default function FooterApplyPage() {
 const styles = {
   footerContainer: {
     marginTop: "100px",
-    background: "#f5f5f5",
+    background: "#ffffff",
     padding: "40px 20px",
   },
   ctaBox: {

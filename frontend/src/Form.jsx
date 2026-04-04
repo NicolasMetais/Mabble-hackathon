@@ -4,7 +4,7 @@ const styles = {
   page: {
     display: "flex",
     minHeight: "100vh",
-    fontFamily: "'Georgia', serif",
+    fontFamily: "'DM Mono', monospace",
     backgroundColor: "#ffffff",
     color: "#111",
   },
@@ -24,7 +24,7 @@ const styles = {
     alignItems: "center",
     gap: "8px",
     fontSize: "11px",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     fontWeight: "700",
     letterSpacing: "0.12em",
     textTransform: "uppercase",
@@ -38,6 +38,8 @@ const styles = {
     backgroundColor: "#111",
   },
   heading: {
+    display: "flex",
+    justifyContent: "left",
     fontSize: "42px",
     fontWeight: "400",
     lineHeight: "1.15",
@@ -50,7 +52,7 @@ const styles = {
     lineHeight: "1.7",
     maxWidth: "320px",
     marginBottom: "40px",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
   },
   featureList: {
     display: "flex",
@@ -73,13 +75,13 @@ const styles = {
   featureTitle: {
     fontSize: "15px",
     fontWeight: "600",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     marginBottom: "2px",
   },
   featureSub: {
     fontSize: "13px",
     color: "#888",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
   },
   divider: {
     borderTop: "1px solid #e5e5e5",
@@ -95,7 +97,7 @@ const styles = {
   socialProof: {
     fontSize: "15px",
     fontWeight: "500",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
   },
 
   // RIGHT PANEL
@@ -114,7 +116,7 @@ const styles = {
   formSubtitle: {
     fontSize: "14px",
     color: "#888",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     marginBottom: "36px",
   },
   section: {
@@ -126,7 +128,7 @@ const styles = {
     gap: "8px",
     fontSize: "14px",
     fontWeight: "600",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     marginBottom: "10px",
   },
   labelDot: {
@@ -143,7 +145,7 @@ const styles = {
     borderRadius: "10px",
     backgroundColor: "#f2f2f2",
     fontSize: "14px",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     color: "#111",
     outline: "none",
     boxSizing: "border-box",
@@ -156,7 +158,7 @@ const styles = {
     borderRadius: "10px",
     backgroundColor: "#f2f2f2",
     fontSize: "14px",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     color: "#111",
     outline: "none",
     boxSizing: "border-box",
@@ -167,7 +169,7 @@ const styles = {
   linksSubtitle: {
     fontSize: "12px",
     color: "#aaa",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     marginBottom: "12px",
     marginTop: "-6px",
   },
@@ -180,7 +182,7 @@ const styles = {
   linkLabel: {
     fontSize: "13px",
     fontWeight: "600",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     marginBottom: "8px",
     display: "block",
   },
@@ -194,7 +196,7 @@ const styles = {
     borderRadius: "10px",
     fontSize: "15px",
     fontWeight: "600",
-    fontFamily: "'Arial', sans-serif",
+    fontFamily: "'DM Mono', monospace",
     cursor: "pointer",
     letterSpacing: "0.02em",
     transition: "background 0.2s, transform 0.1s",
@@ -243,6 +245,11 @@ export default function Form() {
 
   return (
     <div style={styles.page}>
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        `}
+      </style>
       {/* LEFT */}
       <div style={styles.left}>
         <div style={styles.leftTop}>
