@@ -9,8 +9,6 @@ CREATE TYPE account_status AS ENUM ('guest', 'pending', 'accepted', 'rejected');
 
 CREATE TYPE request_status AS ENUM ('pending', 'accepted', 'rejected', 'finished');
 
-CREATE TYPE payment_status AS ENUM ('conflict', 'working', 'completed', 'refund');
-
 CREATE TABLE jobs (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE
@@ -20,7 +18,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
     wallet_id TEXT UNIQUE,
-    wallet_address TEXT NOT NULL,
+    wallet_address TEXT,
     wallet_user_token TEXT UNIQUE,
     password TEXT NOT NULL,
     first_name TEXT,
@@ -36,6 +34,13 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- CREATE TABLE PAIEMENT (
+--     id SERIAL PRIMARY KEY,
+--     provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     client_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     id NUMBER REFERENCES services(id) ON DELETE CASCADE
+-- )
+
 CREATE TABLE admission_forms (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
@@ -50,8 +55,7 @@ CREATE TABLE services (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     jobs_id INTEGER REFERENCES jobs(id),
     description TEXT,
-    amountMBBL NUMERIC NOT NULL CHECK (price > 0),
-    amountUSDC NUMERIC NOT NULL CHECK (price > 0),
+    price NUMERIC NOT NULL CHECK (price >= 0),
     is_active BOOLEAN DEFAULT false,
     client_confirm BOOLEAN DEFAULT false,
     provider_confirm BOOLEAN DEFAULT false,
@@ -68,20 +72,9 @@ CREATE TABLE request_services (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE transaction (
-    id SERIAL PRIMARY KEY,
-    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    sender TEXT NOT NULL,
-    receiver TEXT NOT NULL,
-    amountMBBL NUMERIC NOT NULL CHECK (price > 0),
-    amountUSDC NUMERIC NOT NULL CHECK (price > 0),
-    conflict BOOLEAN DEFAULT false,
-    refund BOOLEAN DEFAULT false
-);
-
 /* CA permet de bloquer la creation d'un nouveau service quand un service 
 entre deux user est en train d'etre fait et de le unlock un fois finis*/
-CREATE UNIQUE INDEX unique_active_request 
+CREATE UNIQUE INDEX unique_active_request
 ON request_services (client_id, service_id) 
 WHERE request_status IN ('pending', 'accepted');
 
