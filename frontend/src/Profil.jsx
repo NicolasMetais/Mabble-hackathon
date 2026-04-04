@@ -1,9 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 import Header from "./Header.jsx";
 
 const Profil = () => {
+  const navigate = useNavigate();
+
+  // State pour les données utilisateur venant du backend
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
+
+  // Appel au backend au chargement de la page (seulement si connecté)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = Cookies.get("authToken");
+        if (!token) {
+          // Pas de token → on affiche la page avec les données par défaut
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch("http://localhost:4000/users/me", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            // Token expiré ou invalide
+            Cookies.remove("authToken");
+          }
+          throw new Error("Erreur lors du chargement du profil");
+        }
+
+        const data = await res.json();
+        setUser(data);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate]);
 
   const styles = {
     page: {
@@ -211,6 +259,7 @@ const Profil = () => {
 
   const skills = ["React", "TypeScript", "Next.js", "UI/UX", "Tailwind CSS"];
 
+
   const bottomCards = [
     {
       id: "ready",
@@ -252,6 +301,27 @@ const Profil = () => {
     },
   ];
 
+  // Affichage pendant le chargement
+  if (loading) {
+    return (
+      <div style={{ ...styles.page, display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <p style={{ fontSize: 18, color: "#888" }}>Chargement du profil...</p>
+      </div>
+    );
+  }
+
+  // Affichage en cas d'erreur
+  if (error) {
+    return (
+      <div style={{ ...styles.page, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", gap: 12 }}>
+        <p style={{ fontSize: 18, color: "#e74c3c" }}>{error}</p>
+        <button onClick={() => window.location.reload()} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", cursor: "pointer" }}>
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.page}>
       {/* Banner full width */}
@@ -268,16 +338,20 @@ const Profil = () => {
           <div style={styles.availableBadge}>Available for work</div>
         </div>
 
-        {/* Info */}
+        {/* Info — données du backend */}
         <div style={styles.infoSection}>
-          <h1 style={styles.name}>Alex Thompson</h1>
-          <p style={styles.title}>Senior Frontend Engineer</p>
+          <h1 style={styles.name}>
+            {user ? `${user.first_name} ${user.last_name}` : "Utilisateur"}
+          </h1>
+          <p style={styles.title}>
+            {user?.job_name || "Poste non renseigné"}
+          </p>
           <p style={styles.location}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
-            San Francisco, CA
+            {user?.email || "Email non renseigné"}
           </p>
 
           {/* Buttons */}
