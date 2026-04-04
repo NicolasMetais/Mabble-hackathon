@@ -3,11 +3,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 const MABBLE_ESCROW_ADDRESS = process.env.MABBLE_ESCROW_ADDRESS as string;
+const provider = new ethers.WebSocketProvider("wss://rpc.testnet.arc.network");
 
 async function createConflictListener( contractAddress : string )
 {
-	const abi = new ethers.Interface( JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "abi/MabbleConflict"), 'utf8')) );	// ABI ( build avec foundry )
-	const provider = new ethers.WebSocketProvider("wss://rpc.testnet.arc.network");
+	
+	const outCompile = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "./abi/MabbleConflict"), 'utf8'));	// ABI ( build avec foundry )
+	const abi = outCompile.abi;
 	const contract = new ethers.Contract(contractAddress, abi, provider );
 	
 	contract.on( "conflictSolved", (_paymentId, _conflictAddress, _solver0, _solver1, _refundAddrees) => {
@@ -38,8 +40,8 @@ async function createConflictListener( contractAddress : string )
 
 export async function startListening()
 {
-	const abi = new ethers.Interface( JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "abi/MabbleEscrow"), 'utf8')) );	// ABI ( build avec foundry )
-	const provider = new ethers.WebSocketProvider("wss://rpc.testnet.arc.network");
+	const outCompile = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "./abi/MabbleEscrow.json"), 'utf8'));	// ABI ( build avec foundry )
+	const abi = outCompile.abi;
 	const contract = new ethers.Contract(MABBLE_ESCROW_ADDRESS, abi, provider );
 	
 	contract.on( "ConflictCreated", (paymentID, _conflictAddress) => {
@@ -48,5 +50,14 @@ export async function startListening()
 		createConflictListener( _conflictAddress );
 	});
 	console.log("Conflict Initialiser Listner On");
+
+	contract.on( "PaymentCreated", (paymentID,to,from,amountMBBL,amountUSDC,releaseTimestamp) => {
+		console.log(` paymentID : ${paymentID}`);
+		console.log(` to : ${to} `);
+		console.log(` from : ${from} `);
+		console.log(` amountMBBL : ${amountMBBL} `);
+		console.log(` amountUSDC : ${amountUSDC} `);
+		console.log(` amountUSDC : ${releaseTimestamp} `);
+	});
 }
 
