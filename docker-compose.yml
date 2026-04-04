@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+  api:
+    build: ./backend/api
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend/api/.env
+    volumes:
+      - ./backend/api:/app
+      - /app/node_modules
+    depends_on:
+      - db
+  payments:
+    build: ./backend/payments
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./backend/payments/.env
+    volumes:
+      - ./backend/payments:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+  db:
+    image: postgres:16
+    restart: always
+    env_file:
+      - ./backend/db/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "4002:5432"
+volumes:
+  postgres_data:

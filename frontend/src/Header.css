@@ -1,0 +1,59 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 70px;
+  background-color: #000000;
+  border-bottom: 1px solid #ffffff;
+}
+
+/* LEFT */
+.header-left {
+  flex: 1;
+}
+
+.logo {
+  height: 40px;
+}
+
+/* CENTER */
+.header-center {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.header-center a {
+  text-decoration: none;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+/* RIGHT */
+.header-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.login-btn {
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid #ffffff;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.join-btn {
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+}

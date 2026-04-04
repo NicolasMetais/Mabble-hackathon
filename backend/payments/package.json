@@ -1,0 +1,28 @@
+{
+  "name": "payments",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+  },
+  "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^10.2.0",
+    "@circle-fin/smart-contract-platform": "^10.2.0",
+    "@circle-fin/w3s-pw-web-sdk": "^1.1.11",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "ethers": "^6.16.0",
+    "express": "^4.18.2",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/node": "25.5.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

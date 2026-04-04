@@ -1,0 +1,133 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+import { IMabbleToken } from "../interface/IMabbleToken.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MabbleEscrow {
+
+	struct  Payment
+	{
+		address		_to;
+		address		_from;
+		uint256		_valueMBBL;
+		uint256		_valueUSDC;
+		uint256		_paymentId;
+		uint256		_releaseTimestamp;
+		bool		_isWithdrawn;
+		bool		_isApproved;
+		address		conflict;
+	}
+
+	uint256						public	_nonce;
+	IMabbleToken				public	_MabbleToken;
+	IERC20						public	_USDCToken;
+	mapping(uint256 => Payment) private	_inProgressPayment;
+	mapping(address => uint256) public	balanceMBBL;
+	mapping(address => uint256) public	balanceUSDC;
+
+	event	PaymentCreated(
+	
+		uint256 indexed paymentID,
+		address indexed to,
+		uint256 amountMBBL,
+		uint256 amountUSDC,
+		uint256 releaseTimestamp,
+		address indexed refundTo
+	);
+
+	event	Withdraw(
+
+		uint256 indexed paymentID,
+		address indexed to,
+		uint256 amountMBBL,
+		uint256 amountUSDC,
+		uint256 releaseTimestamp,
+		address indexed refundTo
+	);
+
+	event	ReleaseFund(
+		
+		uint256	indexed paymentID
+	);
+
+	error CallerNotAllowed();
+	error FundNotReleased();
+	error PaimentAlreadyWithdrawn();
+	error PaimentDispute();
+	error PaimentAlreadyApproved();
+	error NoPaymentId();
+
+	constructor( address MBBLTokenAdress )
+	{
+		_USDCToken = IERC20( 0x3600000000000000000000000000000000000000 );
+		_MabbleToken = IMabbleToken( MBBLTokenAdress );
+	}
+
+	function getNonce() public view returns ( uint256 )
+	{
+		return ( _nonce );
+	}
+
+	function burnMabbleToken( address account, uint256 value ) internal
+	{
+		_MabbleToken.burn( account, value );
+	}
+
+	function releaseFund( uint256 paymentId ) external
+	{
+		Payment storage payment = _inProgressPayment[ paymentId ];
+		if ( msg.sender != payment._from)
+			revert CallerNotAllowed();
+		if ( payment._isApproved )
+			revert PaimentAlreadyApproved();
+		payment._isApproved = true;
+		emit ReleaseFund( paymentId );
+	}
+
+	function pay( address to_, uint256 MBBLvalue_, uint256 USDCvalue_ ) external
+	{
+		if ( MBBLvalue_ != 0 )
+			_MabbleToken.transferFrom( msg.sender, address( this ), MBBLvalue_ );
+		if ( USDCvalue_ != 0 )
+			_USDCToken.transferFrom( msg.sender, address( this ), USDCvalue_ );
+		_inProgressPayment[ _nonce ] = Payment( to_, msg.sender, MBBLvalue_, USDCvalue_, _nonce, block.timestamp, false, false, address(0) );
+		balanceMBBL[ to_ ] += MBBLvalue_;
+		balanceUSDC[ to_ ] += USDCvalue_;
+		emit PaymentCreated( _nonce, to_, MBBLvalue_, USDCvalue_, block.timestamp, msg.sender );
+		_nonce += 1;
+	}
+
+	function withdraw( uint256[] calldata _paymentId ) external
+	{
+		uint256 totalAmountUSDC = 0;
+		uint256 totalAmountMBBL = 0;
+
+		if ( _paymentId.length == 0 )
+			revert NoPaymentId();
+		for ( uint256 i = 0; i < _paymentId.length; i++ )
+		{
+			Payment storage payment = _inProgressPayment [ _paymentId[ i ] ];
+			if ( payment._to != msg.sender )
+				revert CallerNotAllowed();
+			if ( payment._isWithdrawn )
+				revert PaimentAlreadyWithdrawn();
+			if ( payment._isApproved == false )
+				revert FundNotReleased();
+			totalAmountMBBL += payment._valueMBBL;
+			totalAmountUSDC += payment._valueUSDC;
+			payment._isWithdrawn = true;
+		}
+		if ( totalAmountMBBL != 0 )
+		{
+			_MabbleToken.transfer( msg.sender, totalAmountMBBL );		
+			balanceMBBL[ msg.sender ] -= totalAmountMBBL;
+		}
+		if ( totalAmountUSDC != 0 )
+		{
+			_USDCToken.transfer( msg.sender, totalAmountUSDC );		
+			balanceUSDC[ msg.sender ] -= totalAmountUSDC;
+		}
+		emit Withdraw( _nonce, msg.sender, totalAmountMBBL, totalAmountUSDC, block.timestamp, msg.sender);
+	}
+}

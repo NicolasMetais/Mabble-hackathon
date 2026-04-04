@@ -1,0 +1,105 @@
+# Documentation Technique : Flux d'Authentification & Création de Wallet (Circle)
+
+Ce document décrit en détail le flux d'intégration pour la création et la connexion à un portefeuille ("Wallet") via l'API Circle (Programmable Wallets) en utilisant l'authentification par email (OTP).
+
+L'architecture repose sur un modèle **Non-Custodial** : les clés privées des utilisateurs ne transitent **jamais** complètes par notre Backend. Une partie de la clé est générée et sécurisée par le navigateur de l'utilisateur.
+
+---
+
+## 1. Concepts Clés
+
+*   **SDK Circle (`@circle-fin/w3s-pw-web-sdk`)** : Librairie Frontend indispensable. C'est elle qui gère la cryptographie locale (MPC), génère une partie de la clé privée, et affiche les fenêtres sécurisées (saisie de l'OTP, PIN de récupération).
+*   **Backend Intermédiaire ("Proxy")** : Notre Backend est le seul à connaître et utiliser la clé secrète `CIRCLE_API_KEY`. Le Frontend ne doit **jamais** appeler les API `api.circle.com` directement (sauf via les méthodes abstraites du SDK). Le Frontend appelle notre Backend, qui appelle Circle, qui répond au Backend, qui répond au Frontend.
+*   **Challenge Cryptographique (`challengeId`)** : C'est un défi émis par Circle. Sa résolution par le SDK Frontend (via la méthode `.execute()`) constitue l'acte fondateur de création d'un Wallet ou de récupération d'une session. C'est la garantie "Non-Custodial".
+*   **User Token (`userToken`)** : Jeton temporaire (valable généralement 60 minutes) prouvant qu'un utilisateur vient de s'authentifier avec succès par email. Il **ne doit pas** être stocké en base de données de manière persistante.
+
+---
+
+## 2. Flux A : "Onboarding" (Nouvel Utilisateur)
+
+Ce flux s'applique lorsqu'un utilisateur arrive pour la toute première fois et n'a pas encore de Wallet associé à son email.
+
+### ÉTAPE 1 : Initialisation (Côté Frontend)
+Dès le montage de l'application (ou de la page d'authentification), le Frontend doit exécuter deux actions "silencieuses" :
+1.  **Instancier le SDK Circle** : `const sdk = new W3SSdk(...)`
+2.  **Récupérer ou générer un Device ID** : `const deviceId = await sdk.getDeviceId()`. Cet identifiant unique au navigateur doit être conservé (stocké en `localStorage` par exemple) pour la session.
+
+### ÉTAPE 2 : Demande de l'OTP (Email)
+L'utilisateur saisit son email et clique sur "Se connecter".
+
+1.  **[FRONT] ➔ [BACK]** : Envoi de `POST /api/endpoints` avec `action: "requestEmailOtp"`, `email` et `deviceId`.
+2.  **[BACK] ➔ [CIRCLE]** : Le backend forge la requête vers Circle avec la clé API.
+3.  *[Action Externe]* : Circle envoie le mail contenant le code à 6 chiffres à l'utilisateur.
+4.  **[CIRCLE] ➔ [BACK]** : Circle retourne des jetons de session (`deviceToken`, `deviceEncryptionKey`, `otpToken`).
+5.  **[BACK] ➔ [FRONT]** : Le backend transmet ces jetons au frontend.
+6.  **[FRONT]** : Le Frontend met à jour la configuration de son instance SDK Circle avec ces nouveaux jetons (`sdk.updateConfigs(...)`).
+
+### ÉTAPE 3 : Vérification de l'OTP
+1.  **[FRONT]** : Le Frontend appelle `sdk.verifyOtp()`.
+2.  **[FRONT]** : Le SDK Circle affiche une modale sécurisée (hébergée par Circle) demandant le code reçu par mail. L'utilisateur le saisit.
+3.  **[FRONT]** : Si le code est bon, le callback [onLoginComplete](file:///home/jbayonne/circle-email-otp/app/page.tsx#53-85) (défini à l'étape 1) est déclenché par le SDK.
+4.  **[FRONT]** : Le callback contient le précieux **`userToken`** et une `encryptionKey`. Le Frontend est désormais authentifié pour cette session.
+
+### ÉTAPE 4 : Initialisation du Profil & Création du Wallet
+C'est ici que l'on prépare le futur Wallet.
+
+1.  **[FRONT] ➔ [BACK]** : Le Frontend envoie le `userToken` fraîchement reçu (`POST /api/endpoints` avec `action: "initializeUser"`).
+2.  **[BACK] ➔ [CIRCLE]** : Le Backend indique à Circle de préparer un compte pour ce jeton (ex: sur la blockchain `ARC-TESTNET`).
+3.  **[CIRCLE] ➔ [BACK]** : Circle refuse de finaliser sans la présence de l'utilisateur (Non-Custodial). Il renvoie un défi : le **`challengeId`**.
+4.  **[BACK] ➔ [FRONT]** : Le Backend passe le `challengeId` au Frontend.
+
+### ÉTAPE 5 : L'Exécution du Challenge (La "Génération")
+C'est l'étape cruciale où la cryptographie s'exécute côté client.
+
+1.  **[FRONT]** : Le Frontend appelle `sdk.execute(challengeId)`.
+2.  **[FRONT]** : Sous le capot, le SDK combine la signature matérielle de l'appareil (le navigateur) et la réponse de Circle. (Optionnel selon la configuration Circle : l'utilisateur peut être invité à créer un code PIN de récupération via l'UI de Circle).
+3.  **[FRONT]** : Dès que l'exécution réussit, la création du Wallet est actée en arrière-plan sur la blockchain !
+
+### ÉTAPE 6 : Récupération des données du Wallet
+Le Wallet existe désormais. On veut connaître son adresse (0x...).
+
+1.  **[FRONT] ➔ [BACK]** : Le Frontend demande les portefeuilles liés à sa session (`POST /api/endpoints` avec `action: "listWallets"` et le `userToken`).
+2.  **[BACK] ➔ [CIRCLE]** : Route `GET /v1/w3s/wallets`.
+3.  **[CIRCLE] ➔ [BACK] ➔ [FRONT]** : Retourne la liste des Wallets. Le Frontend peut désormais afficher l'adresse publique du portefeuille !
+4.  *(Optionnel)* : Le Frontend ou le Backend insère l'email et le Wallet ID correspondant dans la propre base de données de l'application (pour retenir "Qui possède quel Wallet").
+
+---
+
+## 3. Flux B : "Return User" (Connexion d'un utilisateur existant)
+
+Le flux de retour est presque identique au début, mais diffère à l'étape de création. Puisque l'utilisateur possède déjà un Wallet, Circle reconnaîtra son email et bloquera la tentative de "re-création" (Vite, on intercepte l'erreur !).
+
+### ÉTAPES 1 à 3 : Identiques à l'Onboarding
+L'utilisateur saisit son email ➔ le SDK gère l'envoi de l'OTP ➔ l'utilisateur tape le code ➔ le Frontend récupère un nouveau **`userToken`** tout neuf valide pour 60 minutes.
+
+### ÉTAPE 4 : Tentative d'Initialisation (Révélation du statut)
+Le Frontend ne "sait" pas forcément à l'avance si l'utilisateur est nouveau ou ancien. La logique la plus robuste est de toujours tenter l'initialisation.
+
+1.  **[FRONT] ➔ [BACK]** : Le Frontend envoie le nouveau `userToken` avec l'action `"initializeUser"`.
+2.  **[BACK] ➔ [CIRCLE]** : Le backend tente d'initialiser le compte.
+3.  **[CIRCLE] ➔ [BACK]** : Circle détecte que cet email possède déjà un compte configuré. **Il renvoie une erreur spécifique : `Code 155106 : user already initialized`**.
+4.  **[BACK] ➔ [FRONT]** : Le Backend transmet l'erreur (ou le Frontend la catch). L'application sait désormais que c'est un "Return User".
+
+### ÉTAPE 5 : Récupération directe des Wallets ("Short-circuit")
+Puisque le compte existe et que l'utilisateur est valide (nous avons son `userToken`), on passe directement à la lecture !
+
+1.  **[FRONT]** : (Suite au Catch de l'erreur 155106).
+2.  **[FRONT] ➔ [BACK]** : Le Frontend lance immédiatement la requête `listWallets` en fournissant le `userToken`.
+3.  **[BACK] ➔ [CIRCLE]** : Route `GET /v1/w3s/wallets`.
+4.  **[CIRCLE] ➔ [BACK]** : Circle retrouve les Wallets correspondants à l'identité validée par l'OTP.
+5.  **[BACK] ➔ [FRONT]** : Retourne le tableau des Wallets. Le Frontend affiche l'adresse et l'utilisateur est connecté ! (La boucle est bouclée, le `challengeId` n'est pas nécessaire pour une simple reconnexion "Email OTP" sans actions transactionnelles).
+
+---
+
+## Résumé des interactions Frontend ↔ Backend
+
+| Action Frontend | Route Backend (`/api/endpoints`) | Action Circle (Backend interne) | Retour vers Frontend |
+| :--- | :--- | :--- | :--- |
+| **Demande de connexion (Bouton 1)** | `action: "requestEmailOtp"` | `POST /v1/w3s/users/email/token` | Jetons `deviceToken`, `otpToken`, etc. |
+| **Initialisation post-OTP (Bouton 3)** | `action: "initializeUser"` | `POST /v1/w3s/user/initialize` | `challengeId` (ou erreur *155106* si existant) |
+| **Charger les profils (Auto / Erreur)** | `action: "listWallets"` | `GET /v1/w3s/wallets` | Array `[ { id: "...", address: "0x..." } ]` |
+| **Charger un solde (Auto)** | `action: "getTokenBalance"` | `GET .../wallets/{id}/balances` | Array `[ { amount: "10.0", token: {...} } ]` |
+
+***
+
+*Note pour l'équipe Frontend : Assurez-vous de gérer les états de chargement (`isLoading`) et d'erreur (`isError`) sur l'interface (UI) pour bloquer les boutons pendant que le SDK ou les requêtes Backend s'exécutent en tâche de fond !*
