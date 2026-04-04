@@ -294,7 +294,7 @@ export default function Form() {
 
       {/* RIGHT */}
       <div style={styles.right}>
-        <h2 style={styles.formTitle}>Apply to the community</h2>
+        <h2 style={styles.formTitle}>Create an account</h2>
         <p style={styles.formSubtitle}>Tell us a bit about yourself to get started</p>
 
         <div style={styles.section}>

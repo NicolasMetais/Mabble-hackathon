@@ -1,9 +1,8 @@
 import { initiateSmartContractPlatformClient } from "@circle-fin/smart-contract-platform";
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
+import "dotenv/config";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { error } from "node:console";
 
 const API_KEY = process.env.CIRCLE_API_KEY as string;
 const CIRCLE_ENTITY_SECRET = process.env.CIRCLE_ENTITY_SECRET as string;
@@ -68,7 +67,7 @@ async function deployMabbleContract( _name : string, _description : string, _abi
 	return ( responseTokenDeployement.data );
 }
 
-deployMabbleContract( "MabbleEscrowTest", "Deployment Testing", "abi/MabbleEscrow.json",  [MABBLE_TOKEN_ADDRESS] ).catch( (error) =>
+deployMabbleContract( "MabbleEscrowTest2", "Deployment Testing", "abi/MabbleEscrow.json",  [MABBLE_TOKEN_ADDRESS] ).catch( (error) =>
 	{
 		console.error("Erreur :", error.message || error);
 		process.exit(1);

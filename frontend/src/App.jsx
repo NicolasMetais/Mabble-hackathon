@@ -10,6 +10,7 @@ import Profil from "./Profil.jsx";
 import Search from "./Search.jsx";
 import Signup from "./Signup.jsx";
 import CreateAccount from "./CreateAccount.jsx";
+import Login from "./Login.jsx";
 import { Routes, Route } from "react-router-dom";
 import FooterApplyPage from "./FooterApplyPage.jsx";
 

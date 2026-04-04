@@ -1,7 +1,6 @@
 import React from "react";
 import FooterApplyPage from "../FooterApplyPage.jsx";
 import Header from "../Header.jsx";
-import { Link } from "react-router-dom";
 
 
 export default function ApplyPage() {
@@ -20,12 +19,10 @@ export default function ApplyPage() {
 
         <p style={styles.signupText}>
           Don’t have an account?{" "}
-          <Link to="/create-account" style={styles.link}>
+          <a href="#" style={styles.link}>
             Sign up
-          </Link>
+          </a>
         </p>
-        
-
       </div>
 
       {/* Footer text */}

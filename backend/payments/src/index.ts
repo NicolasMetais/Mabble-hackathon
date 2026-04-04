@@ -9,7 +9,10 @@ import { getUserWallet } from "./utils";
 import { getUserBalance } from "./utils";
 import { releaseFund } from "./token_interaction";
 import { withdraw } from "./token_interaction";
+import { initateDispute } from "./dispute";
+import { startListening } from './event';
 
+startListening();
 const app = express();
 app.use(cors());
 const PORT = 4001;
@@ -73,6 +76,22 @@ app.post("/pay", async (req: any, res: any) => {
 			throw new Error("[ Pay ] fromWalletAddress || fromWalletID || userToken || to : undifined.");
 		const UUID = crypto.randomUUID();
 		const challengeId = await payment( fromWalletAddress, fromWalletID, userToken, to, USDCValue, MBBLValue, UUID);
+		res.status(200).json( challengeId );
+	}
+	catch ( error : any )
+	{
+		res.status(400).json({ error: error.message });
+	}
+});
+
+app.post("/initializeDispute", async ( req : any, res : any ) => 
+{
+	try
+	{
+		const { fromWalletId , userToken , paymentId, solver0 , solver1 } = req.body;
+		if ( !fromWalletId || !userToken || !paymentId|| !solver0 || !solver1 )
+				throw new Error("fromWalletId || userToken || paymentId|| solver0 || solver1 : undifined.")
+		const challengeId =  await initateDispute( fromWalletId, userToken, paymentId, solver0, solver1);		
 		res.status(200).json( challengeId );
 	}
 	catch ( error : any )

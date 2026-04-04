@@ -13,7 +13,6 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({ //j'active le rejet du DTO
-      transform: true,
       whitelist: true, //supprime les champs pas definis dans les DTO
       forbidNonWhitelisted: true, //je rejette directe la requete si il y a une data que je ne connais pas
     }),
