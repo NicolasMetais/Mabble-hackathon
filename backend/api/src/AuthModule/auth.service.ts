@@ -45,7 +45,6 @@ export class AuthService {
         const compare = await bcrypt.compare(dto.password, user.password);
         if (!compare) throw new BadRequestException('Invalid Credentials');
 
-<<<<<<< HEAD
         if(!response.ok)
             throw new BadRequestException('Connect Wallet Error');
 
@@ -53,10 +52,6 @@ export class AuthService {
         const token = this.jwtService.sign({ sub: user.id, email: user.email }, {expiresIn: '5h'});
 
         return { message : "Email sent", token: token, deviceToken: data.deviceToken, deviceEncryption: data.deviceEncryption, otpToken: data.otpToken };
-=======
-        const token = this.jwtService.sign({ sub: user.id, email: user.email });
-        return { token };
->>>>>>> origin/contract
     };
 
     async getUserChallenge() { //Wallet Creation
