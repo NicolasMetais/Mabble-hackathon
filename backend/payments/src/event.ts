@@ -1,7 +1,13 @@
 import { ethers } from "ethers";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-async function listenConflict()
+const MABBLE_ESCROW_ADDRESS = process.env.MABBLE_ESCROW_ADDRESS as string;
+
+async function listenPaiement()
 {
-    const provider = new ethers.WebSocketProvider("wss://rpc.testnet.arc.network");
-    const contract = new ethers.Contract()
+	const abi = new ethers.Interface( JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "abi/MabbleEscrow"), 'utf8')) );	// ABI ( build avec foundry )
+	const provider = new ethers.WebSocketProvider("wss://rpc.testnet.arc.network");
+	const contract = new ethers.Contract(MABBLE_ESCROW_ADDRESS, abi, provider );
+	contract.on( "PaymentCreated(uint256 indexed,address indexed,uint256,uint256,uint256,address)", );
 }

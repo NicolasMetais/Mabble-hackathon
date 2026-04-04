@@ -104,9 +104,9 @@ contract MabbleEscrow {
 		if ( msg.sender != address(paymentInConflict.conflict) )
 			revert  CallerNotAllowed();
 		if ( paymentInConflict._valueUSDC != 0 )
-			_MabbleToken.transfer(refundAdress, paymentInConflict._valueUSDC);
+			_USDCToken.transfer(refundAdress, paymentInConflict._valueUSDC);
 		if ( paymentInConflict._valueMBBL != 0 )
-			_USDCToken.transfer(refundAdress, paymentInConflict._valueMBBL);
+			_MBBLToken.transfer(refundAdress, paymentInConflict._valueMBBL);
 	}
 
 	function releaseFund( uint256 paymentId ) external

@@ -1,9 +1,7 @@
 import { initiateSmartContractPlatformClient } from "@circle-fin/smart-contract-platform";
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { error } from "node:console";
 
 const API_KEY = process.env.CIRCLE_API_KEY as string;
 const CIRCLE_ENTITY_SECRET = process.env.CIRCLE_ENTITY_SECRET as string;
