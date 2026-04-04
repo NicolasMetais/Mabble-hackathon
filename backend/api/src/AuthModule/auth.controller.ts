@@ -37,7 +37,7 @@ export class AuthController {
 
     @Post('addWallet')
     async addWallet(@Req() req: any, @Body() dto : UserTokenDto) {
-        return this.authService.addWallet(req.user.userId);
+        return this.authService.addWallet(req.user.userId, dto);
     }
 
     @Post('getWallet')
