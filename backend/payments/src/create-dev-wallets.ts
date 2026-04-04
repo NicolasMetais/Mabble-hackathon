@@ -11,8 +11,6 @@ import {
 
 
 const OUTPUT_DIR = path.join(__dirname, "output");
-const WALLET_SET_NAME = "Circle Wallet Onboarding";
-const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000";
 
 async function createDevWallet() {
 
