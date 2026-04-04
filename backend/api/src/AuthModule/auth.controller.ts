@@ -4,7 +4,6 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { AdmissionDto } from './dto/admission.dto';
 import { Public } from '../jwt.guard';
-import { UserTokenDto } from './dto/InitializeWallet.dto';
 
 
 
@@ -29,15 +28,10 @@ export class AuthController {
         return this.authService.admission(req.user.userId, dto);
     }
 
-    @Post('initializeWallet')
-    async initializeWallet(@Body() dto : UserTokenDto) {
-        return this.authService.initializeWallet(dto);
+    @Post('getUserChallenge')
+    async getuserChallenge() {
+        return this.authService.getUserChallenge();
 
-    }
-
-    @Post('addWallet')
-    async addWallet(@Req() req: any, @Body() dto : UserTokenDto) {
-        return this.authService.addWallet(req.user.userId);
     }
 
     @Post('getWallet')

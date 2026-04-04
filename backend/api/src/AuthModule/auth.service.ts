@@ -3,27 +3,6 @@ import { AdmissionDto } from './dto/admission.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Pool } from 'pg';
-import { UserTokenDto } from './dto/InitializeWallet.dto';
-
-interface ConnectWalletResponse {
-    token: string;
-    deviceToken: string;
-    deviceEncryption: string;
-    otpToken: string;
-}
-
-interface AddWallet {
-    walletId: string;
-    walletAddress: string;
-}
-
-interface ChallengeId {
-    challengeId: string;
-}
-
-interface Balance {
-    balance: string;
-}
 
 @Injectable()
 export class AuthService {
@@ -39,28 +18,20 @@ export class AuthService {
             if (res.rows.length > 0) throw new BadRequestException('Email already used');
         }
         const hash = await bcrypt.hash(dto.password, 12)
+        // const wallet_address = await fetch("localhost:4001/getWallet"); //A SETUP APRES LE MERGE
+        const wallet_address = "test";
         await this.pool.query(
-            'INSERT INTO "users" (email ,password, first_name, last_name) VALUES($1, $2, $3, $4) RETURNING id',
-            [dto.email, hash, dto.first_name, dto.last_name],
+            'INSERT INTO "users" (email, wallet_address ,password, first_name, last_name) VALUES($1, $2, $3, $4, $5) RETURNING id',
+            [dto.email, wallet_address, hash, dto.first_name, dto.last_name],
         );
         return { "success" : true };
     }
 
-    async login(dto: {email: string; password: string; deviceId: string;}) {
-        //user selection
-        const res = await this.pool.query(
-            'SELECT * FROM "users" WHERE email=$1',
-            [dto.email]
-        );
+    async login(dto: {email:string; password: string }) {
+        const res = await this.pool.query('SELECT * FROM "users" WHERE email=$1',[dto.email]);
         const user = res.rows[0];
         if (!user) throw new BadRequestException('Invalid Credentials');
-
-        //password compare
-        const compare = await bcrypt.compare(dto.password, user.password);
-        if (!compare) throw new BadRequestException('Invalid Credentials');
-
-        //sdk circle setup
-        const response = await fetch("http://payments:4001/connectWallet", {
+        await fetch("http://payments:4001/userCreationWallet", {
             method: "POST",
             headers: {
                 "Content-type": "application/json"
@@ -68,90 +39,60 @@ export class AuthService {
             body: JSON.stringify({
                 "action": "requestEmailOTP",
                 "email": user.email,
-                "deviceId": dto.deviceId,
+                "deviceId": "LEFRONTENVOIUNTRUC", //TEMPORAIRE
             })
         });
+        const compare = await bcrypt.compare(dto.password, user.password);
+        if (!compare) throw new BadRequestException('Invalid Credentials');
 
-        if(!response.ok)
-            throw new BadRequestException('Connect Wallet Error');
-
-        const data = await response.json() as ConnectWalletResponse;
         const token = this.jwtService.sign({ sub: user.id, email: user.email });
-
-        return { message : "Email sent", token: token, deviceToken: data.deviceToken, deviceEncryption: data.deviceEncryption, otpToken: data.otpToken };
+        return { token };
     };
 
-    //Wallet Creation only one time
-    async initializeWallet(dto : UserTokenDto) {
-        const res = await fetch("http://payments:4001/connectWallet", {
+    async getUserChallenge() { //Wallet Creation
+        const res = await fetch("http://payments:4001/userCreationWallet", {
             method: "POST",
             headers: {
                   "Content-type": "application/json"
             },
             body: JSON.stringify({
               "action": "initialize",
-                "userToken": dto.userToken,
+                "userToken": "LEFRONTENVOIUNTOKEN", //TEMPORAIRE
             })
         });
-        if (!res.ok)
-            throw new BadRequestException('Circle Error');
-        const data = await res.json() as ChallengeId;
-        return { challengeId: data.challengeId };
-    };
-
-    async addWallet(userId: string, dto: UserTokenDto) {
-        const exist = await this.pool.query(`
-            SELECT wallet_id FROM users WHERE id = $1`, 
-            [userId],
-        );
-
-        if (exist.rows[0]?.wallet_id)
-            return { success: true, message: "Wallet already exists" };
-
-        const res = await fetch("http://payments:4001/getWallet", {
-            method: "POST",
-            headers: {
-                  "Content-type": "application/json"
-            },
-            body: JSON.stringify({
-                "userToken": dto.userToken,
-            })
-        });
-        if (!res.ok)
-            throw new BadRequestException("Error fetching the wallet");
-        const data = await res.json() as AddWallet;
-        await this.pool.query(`UPDATE "users" SET wallet_id = $1, wallet_address = $2 WHERE id = $3`,
-            [data.walletId, data.walletAddress , userId],
-        )
-        return { success: true, message : "Wallet Created" };
+        console.log(res);
+        return { "challengeId": res };
     };
 
     async getWallet(userId: string) {
-        const res = await this.pool.query(`
-            SELECT wallet_id, wallet_address FROM users WHERE id = $1`,
-            [userId],
-        );
-        const user = res.rows[0];
-        if(!user)
-            throw new NotFoundException();
-        return { walletId: user.wallet_id, walletAddress: user.wallet_address};
-    };
-
-    //nombre de Coins d'un user
-    async getBalance(dto : UserTokenDto) {
         const res = await fetch("http://payments:4001/getWallet", {
             method: "POST",
             headers: {
                   "Content-type": "application/json"
             },
             body: JSON.stringify({
-                "userToken": dto.userToken,
+                "userToken": "LEFRONTENVOIUNTOKEN", //TEMPORAIRE
             })
         });
-        if (!res.ok)
-            throw new BadRequestException('bad userToken');
-        const data = await res.json() as Balance;
-        return { balance: data.balance };
+        console.log(res);
+        // await this.pool.query(`UPDATE "users" SET wallet_id = $1, wallet_address = $2 WHERE id = $3`,
+        //     [res.wallets.id , res.wallets.address , userId],
+        // )
+        return { "success": true };
+    };
+
+    async getBalance() {
+        const res = await fetch("http://payments:4001/getWallet", {
+            method: "POST",
+            headers: {
+                  "Content-type": "application/json"
+            },
+            body: JSON.stringify({
+                "userToken": "LEFRONTENVOIUNTOKEN", //TEMPORAIRE
+            })
+        });
+        console.log(res);
+        return { "challengeId": res };
     };
 
     async admission(userId: string, dto: AdmissionDto) {

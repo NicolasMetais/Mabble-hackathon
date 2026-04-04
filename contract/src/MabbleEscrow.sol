@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 import { IMabbleToken } from "../interface/IMabbleToken.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { MabbleConflict } from "./MabbleConflict.sol";
 
 contract MabbleEscrow {
 
@@ -16,7 +17,7 @@ contract MabbleEscrow {
 		uint256		_releaseTimestamp;
 		bool		_isWithdrawn;
 		bool		_isApproved;
-		address		conflict;
+		address		 conflict;
 	}
 
 	uint256						public	_nonce;
@@ -46,6 +47,12 @@ contract MabbleEscrow {
 		address indexed refundTo
 	);
 
+	event	ConflictCreated(
+
+		uint256	indexed paymentID,
+		address _conflictAddress
+	);
+
 	event	ReleaseFund(
 		
 		uint256	indexed paymentID
@@ -56,12 +63,29 @@ contract MabbleEscrow {
 	error PaimentAlreadyWithdrawn();
 	error PaimentDispute();
 	error PaimentAlreadyApproved();
+	error ConflictOnTheWrongPayment();
 	error NoPaymentId();
+	error PaymentIsInConflict();
 
 	constructor( address MBBLTokenAdress )
 	{
 		_USDCToken = IERC20( 0x3600000000000000000000000000000000000000 );
 		_MabbleToken = IMabbleToken( MBBLTokenAdress );
+	}
+
+	function initializeConflict( uint256 paymentId, address solver0_, address solver1_)
+	{
+		Payment storage payment = _inProgressPayment[ paymentID ];		
+		if ( msg.sender != payment._to &&  msg.sender != payment._from )
+			revert ConflictOnTheWrongPayment();
+		address conflict_from = msg.sender;
+		adress conflict_to;
+		if (conflict_from == payment._from )
+			conflict_to = payment._to;
+		else 
+			conflict_to = payment._from;
+		payment.conflict = new MabbleConflict( address(this), solver0_, solver1_, paymentId, payment._to, conflict_from._from, conflict_to.to );
+		emit ConflictCreate( paymentId, address(payment.conflict) );
 	}
 
 	function getNonce() public view returns ( uint256 )
@@ -74,13 +98,26 @@ contract MabbleEscrow {
 		_MabbleToken.burn( account, value );
 	}
 
+	function conflictRefund( uint256 paymenId, address refundAdress )
+	{
+		Payment storage paymentInConflict = _inProgressPayment[paymenId];
+		if ( msg.sender != paymentInConflict.conflict )
+			revert  CallerNotAllowed();
+		if ( paymentInConflict._valueUSDC != 0 )
+			_MabbleToken.transfer(refundAdress, paymentInConflict._valueUSDC)
+		if ( paymentInConflict._valueMBBL != 0 )
+			_USDCToken.transfer(refundAdress, paymentInConflict._valueMBBL);
+	}
+
 	function releaseFund( uint256 paymentId ) external
 	{
 		Payment storage payment = _inProgressPayment[ paymentId ];
-		if ( msg.sender != payment._from)
+		if ( msg.sender != payment._from )
 			revert CallerNotAllowed();
 		if ( payment._isApproved )
 			revert PaimentAlreadyApproved();
+		if ( payment.conflict != address(0) )
+			revert PaymentIsInConflict();
 		payment._isApproved = true;
 		emit ReleaseFund( paymentId );
 	}
@@ -108,12 +145,14 @@ contract MabbleEscrow {
 		for ( uint256 i = 0; i < _paymentId.length; i++ )
 		{
 			Payment storage payment = _inProgressPayment [ _paymentId[ i ] ];
-			if ( payment._to != msg.sender )
+			if ( payment._to != msg.sender && msg.sender != payment.conflict )
 				revert CallerNotAllowed();
 			if ( payment._isWithdrawn )
 				revert PaimentAlreadyWithdrawn();
 			if ( payment._isApproved == false )
 				revert FundNotReleased();
+			if ( payment.conflict != address(0) )
+				revert PaymentIsInConflict();
 			totalAmountMBBL += payment._valueMBBL;
 			totalAmountUSDC += payment._valueUSDC;
 			payment._isWithdrawn = true;

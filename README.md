@@ -51,4 +51,3 @@ This service:
   - never interacts directly with clients
 
 
-# Mabble-hackathon

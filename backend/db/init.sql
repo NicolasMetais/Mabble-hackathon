@@ -34,13 +34,6 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE PAIEMENT (
-    id SERIAL PRIMARY KEY,
-    provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    id NUMBER REFERENCES services(id) ON DELETE CASCADE
-)
-
 CREATE TABLE admission_forms (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
@@ -74,7 +67,7 @@ CREATE TABLE request_services (
 
 /* CA permet de bloquer la creation d'un nouveau service quand un service 
 entre deux user est en train d'etre fait et de le unlock un fois finis*/
-CREATE UNIQUE INDEX unique_active_request
+CREATE UNIQUE INDEX unique_active_request 
 ON request_services (client_id, service_id) 
 WHERE request_status IN ('pending', 'accepted');
 

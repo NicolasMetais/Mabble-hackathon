@@ -61,15 +61,6 @@ function batchPayment(to : string, USDCValue : number, MBBLValue : number)
 
 export async function payment( fromWalletAddress : string, fromWalletID : string, userToken: string, to : string, USDCValue : number, MBBLValue : number, UUID : any ) {
 
-	const toStatusHex = await getWhiteListStatus( to );
-	const isToWhiteListed = ethers.AbiCoder.defaultAbiCoder().decode(["bool"], toStatusHex)[0];
-	if ( !isToWhiteListed )
-		throw new Error ( "to is not white listed");
-		
-	const fromStatusHex = await getWhiteListStatus( fromWalletAddress );
-	const isFromWhiteListed = ethers.AbiCoder.defaultAbiCoder().decode(["bool"], fromStatusHex)[0];
-	if ( !isFromWhiteListed )
-		throw new Error ( "from is not white listed");
 	const batchOfTransaction = batchPayment( to, USDCValue, MBBLValue);
 	const responsePay = await fetch(
 	`https://api.circle.com/v1/w3s/user/transactions/contractExecution`,
