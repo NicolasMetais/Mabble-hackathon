@@ -6,10 +6,11 @@ import { Pool } from 'pg';
 import { UserTokenDto } from './dto/InitializeWallet.dto';
 
 interface ConnectWalletResponse {
-    token: string;
-    deviceToken: string;
-    deviceEncryption: string;
-    otpToken: string;
+    data : { 
+        deviceToken: string;
+        deviceEncryptionKey: string;
+        otpToken: string;
+    }
 }
 
 interface AddWallet {
@@ -18,7 +19,10 @@ interface AddWallet {
 }
 
 interface ChallengeId {
-    challengeId: string;
+    data : {
+        challengeId: string;
+    }
+
 }
 
 interface Balance {
@@ -77,8 +81,7 @@ export class AuthService {
 
         const data = await response.json() as ConnectWalletResponse;
         const token = this.jwtService.sign({ sub: user.id, email: user.email }, {expiresIn: '5h'});
-
-        return { message : "Email sent", token: token, deviceToken: data.deviceToken, deviceEncryption: data.deviceEncryption, otpToken: data.otpToken };
+        return { message : "Email sent", token: token, deviceToken: data.data.deviceToken, deviceEncryptionKey: data.data.deviceEncryptionKey, otpToken: data.data.otpToken };
     };
 
     //Wallet Creation only one time
@@ -95,11 +98,8 @@ export class AuthService {
         });
         if (!res.ok)
             throw new BadRequestException('Circle Error');
-        const res1 = await fetch("http://payments:4001/welcomme2mabble" , {
-
-        })
         const data = await res.json() as ChallengeId;
-        return { challengeId: data.challengeId };
+        return { challengeId: data.data.challengeId };
     };
 
     async addWallet(userId: string, dto: UserTokenDto) {

@@ -18,7 +18,8 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0",
     "run": "^1.5.0",
-    "three": "^0.183.2"
+    "three": "^0.183.2",
+    "vite-plugin-node-polyfills": "^0.26.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

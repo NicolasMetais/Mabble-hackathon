@@ -34,6 +34,11 @@ export class AuthController {
         return this.authService.addWallet(req.user.userId, dto);
     }
 
+    @Post('initializeWallet')
+    async initializeWallet(@Req() req: any, @Body() dto : UserTokenDto) {
+        return this.authService.initializeWallet(dto);
+    }
+
     @Post('getWallet')
     async getWallet(@Req() req: any) {
         return this.authService.getWallet(req.user.userId);

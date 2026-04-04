@@ -258,6 +258,36 @@ const CreateAccount = () => {
     </svg>
   );
 
+  const onSubmit = async () => {
+      const {email, password, firstName, lastName } = form;
+      console.log(form.email);
+      try {
+        const res = await fetch("http://localhost:4000/signup", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json"
+            // "Authorization": `Bearer ${TOKEN}`
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            first_name: firstName,
+            last_name: lastName
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          console.log(err);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Account created: ", data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
   const renderField = (field, label, icon, type = "text", placeholder = "") => {
     const isPassword = field === "password" || field === "confirmPassword";
     const isVisible = field === "password" ? showPassword : showConfirm;
@@ -320,6 +350,7 @@ const CreateAccount = () => {
           style={{ ...s.submitBtn, ...(hoveredBtn === "submit" ? s.submitBtnHover : {}) }}
           onMouseEnter={() => setHoveredBtn("submit")}
           onMouseLeave={() => setHoveredBtn(null)}
+          onClick={onSubmit}
         >
           Create my account
         </button>
