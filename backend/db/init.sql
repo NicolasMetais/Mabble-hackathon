@@ -18,7 +18,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL UNIQUE,
     wallet_id TEXT UNIQUE,
-    wallet_address TEXT NOT NULL,
+    wallet_address TEXT,
     wallet_user_token TEXT UNIQUE,
     password TEXT NOT NULL,
     first_name TEXT,
@@ -34,12 +34,12 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE PAIEMENT (
-    id SERIAL PRIMARY KEY,
-    provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    id NUMBER REFERENCES services(id) ON DELETE CASCADE
-)
+-- CREATE TABLE PAIEMENT (
+--     id SERIAL PRIMARY KEY,
+--     provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     client_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     id NUMBER REFERENCES services(id) ON DELETE CASCADE
+-- )
 
 CREATE TABLE admission_forms (
     id SERIAL PRIMARY KEY,
