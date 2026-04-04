@@ -32,6 +32,7 @@ app.post("/ConnectWallet", async (req: any, res: any) => {
 	const { action, ...param } = body;
 
 	try {
+		console.log("ici");
 		if (action === "requestEmailOTP") {
 			const { email, deviceId } = param;
 			if (!email || !deviceId) {
@@ -39,6 +40,7 @@ app.post("/ConnectWallet", async (req: any, res: any) => {
 
 			}
 			const clientInfo = await circle_OTP_request(email, deviceId);
+			console.log("ici1");
 			res.status(200).json(clientInfo);
 		}
 		else if (action === "initialize") {
@@ -53,6 +55,7 @@ app.post("/ConnectWallet", async (req: any, res: any) => {
 			res.status(400).json({ error: "action undifined" });
 	}
 	catch (error: any) {
+		console.log("error");
 		res.status(400).json({ error: error.message });
 	}
 });
