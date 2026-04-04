@@ -9,6 +9,8 @@ CREATE TYPE account_status AS ENUM ('guest', 'pending', 'accepted', 'rejected');
 
 CREATE TYPE request_status AS ENUM ('pending', 'accepted', 'rejected', 'finished');
 
+CREATE TYPE payment_status AS ENUM ('conflict', 'working', '',)
+
 CREATE TABLE jobs (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE
@@ -48,7 +50,8 @@ CREATE TABLE services (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     jobs_id INTEGER REFERENCES jobs(id),
     description TEXT,
-    price NUMERIC NOT NULL CHECK (price >= 0),
+    amountMBBL NUMERIC NOT NULL CHECK (price > 0),
+    amountUSDC NUMERIC NOT NULL CHECK (price > 0),
     is_active BOOLEAN DEFAULT false,
     client_confirm BOOLEAN DEFAULT false,
     provider_confirm BOOLEAN DEFAULT false,
@@ -63,6 +66,16 @@ CREATE TABLE request_services (
     description TEXT NOT NULL,
     price NUMERIC NOT NULL CHECK (price >= 0),
     created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE transaction (
+    id SERIAL PRIMARY KEY,
+    client_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    sender TEXT NOT NULL,
+    receiver TEXT NOT NULL,
+    amountMBBL NUMERIC NOT NULL CHECK (price > 0),
+    amountUSDC NUMERIC NOT NULL CHECK (price > 0),
+    
 );
 
 /* CA permet de bloquer la creation d'un nouveau service quand un service 
