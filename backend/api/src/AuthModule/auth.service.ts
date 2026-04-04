@@ -76,7 +76,7 @@ export class AuthService {
             throw new BadRequestException('Connect Wallet Error');
 
         const data = await response.json() as ConnectWalletResponse;
-        const token = this.jwtService.sign({ sub: user.id, email: user.email });
+        const token = this.jwtService.sign({ sub: user.id, email: user.email }, {expiresIn: '5h'});
 
         return { message : "Email sent", token: token, deviceToken: data.deviceToken, deviceEncryption: data.deviceEncryption, otpToken: data.otpToken };
     };
@@ -95,6 +95,9 @@ export class AuthService {
         });
         if (!res.ok)
             throw new BadRequestException('Circle Error');
+        const res1 = await fetch("http://payments:4001/welcomme2mabble" , {
+
+        })
         const data = await res.json() as ChallengeId;
         return { challengeId: data.challengeId };
     };
@@ -123,6 +126,20 @@ export class AuthService {
         await this.pool.query(`UPDATE "users" SET wallet_id = $1, wallet_address = $2 WHERE id = $3`,
             [data.walletId, data.walletAddress , userId],
         )
+
+        const welcome = await fetch("http://payments:4001/welcome", {
+            method: "POST",
+            headers: {
+                "Content-type" : "application/json",
+            },
+            body :JSON.stringify({
+                _userWalletAddress: data.walletAddress,
+                _userWalletID: data.walletId,
+                _userToken : dto.userToken
+            })
+        })
+        if (!welcome.ok)
+            throw new BadRequestException('Process failed');
         return { success: true, message : "Wallet Created" };
     };
 
