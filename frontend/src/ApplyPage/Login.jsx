@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import FooterApplyPage from "./FooterApplyPage.jsx";
+import FooterApplyPage from "../FooterApplyPage.jsx";
 import Header from "../Header.jsx";
-import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk"
+// import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk"
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 
@@ -86,7 +86,7 @@ export default function Login() {
             setError("Error Wallet setup: " + err2.message);
             return ;
           }
-          navigate("/LandingPage");
+          navigate("/");
         });
       } catch (e) {
         setError(e.message);
@@ -96,10 +96,6 @@ export default function Login() {
     } catch (e) {
       setError(e.message);
     }
-  };
-
-  const handleVerifyOtp = () => {
-    setError("");
   };
 
    return (
@@ -147,7 +143,6 @@ export default function Login() {
           <br />Skills are the new currency.
         </p>
       </div>
-      <FooterApplyPage />
     </div>
   );
 }

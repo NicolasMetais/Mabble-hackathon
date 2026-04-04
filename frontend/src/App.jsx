@@ -8,9 +8,8 @@ import ApplyPage from "./ApplyPage/ApplyPage.jsx";
 import Form from "./Form.jsx";
 import Profil from "./Profil.jsx";
 import Search from "./Search.jsx";
-import Signup from "./Signup.jsx";
 import CreateAccount from "./CreateAccount.jsx";
-import Login from "./Login.jsx";
+import Login from "./ApplyPage/Login.jsx";
 import { Routes, Route } from "react-router-dom";
 import FooterApplyPage from "./FooterApplyPage.jsx";
 
@@ -21,10 +20,10 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/apply" element={<ApplyPage />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/search" element={<Search />} />
         <Route path="/form" element={<Form />} />
         <Route path="/profil" element={<Profil />} />
-        <Route path="/signup" element={<Signup />} />
         <Route path="/create-account" element={<CreateAccount />} />
       </Routes>
       <FooterApplyPage />

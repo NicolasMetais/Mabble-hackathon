@@ -14,7 +14,7 @@ export default function Header() {
           <NavLink to="/search" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>Search talents</NavLink>
         </div>
         <div>
-          <Link to="/apply" style={styles.loginBtn}>Login</Link>
+          <Link to="/login" style={styles.loginBtn}>Login</Link>
           <Link to="/form" style={styles.getStartedBtn}>Get started</Link>
         </div>
       </div>
