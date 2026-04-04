@@ -31,10 +31,10 @@ contract MabbleEscrow {
 	
 		uint256 indexed paymentID,
 		address indexed to,
+		address indexed from,
 		uint256 amountMBBL,
 		uint256 amountUSDC,
-		uint256 releaseTimestamp,
-		address indexed refundTo
+		uint256 releaseTimestamp
 	);
 
 	event	Withdraw(
@@ -106,7 +106,7 @@ contract MabbleEscrow {
 		if ( paymentInConflict._valueUSDC != 0 )
 			_USDCToken.transfer(refundAdress, paymentInConflict._valueUSDC);
 		if ( paymentInConflict._valueMBBL != 0 )
-			_MBBLToken.transfer(refundAdress, paymentInConflict._valueMBBL);
+			_MabbleToken.transfer(refundAdress, paymentInConflict._valueMBBL);
 	}
 
 	function releaseFund( uint256 paymentId ) external
@@ -131,7 +131,7 @@ contract MabbleEscrow {
 		_inProgressPayment[ _nonce ] = Payment( to_, msg.sender, MBBLvalue_, USDCvalue_, _nonce, block.timestamp, false, false, MabbleConflict(address(0)) );
 		balanceMBBL[ to_ ] += MBBLvalue_;
 		balanceUSDC[ to_ ] += USDCvalue_;
-		emit PaymentCreated( _nonce, to_, MBBLvalue_, USDCvalue_, block.timestamp, msg.sender );
+		emit PaymentCreated( _nonce, to_, msg.sender, MBBLvalue_, USDCvalue_, block.timestamp );
 		_nonce += 1;
 	}
 
