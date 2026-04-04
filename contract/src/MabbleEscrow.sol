@@ -9,15 +9,15 @@ contract MabbleEscrow {
 
 	struct  Payment
 	{
-		address		_to;
-		address		_from;
-		uint256		_valueMBBL;
-		uint256		_valueUSDC;
-		uint256		_paymentId;
-		uint256		_releaseTimestamp;
-		bool		_isWithdrawn;
-		bool		_isApproved;
-		address		 conflict;
+		address				_to;
+		address				_from;
+		uint256				_valueMBBL;
+		uint256				_valueUSDC;
+		uint256				_paymentId;
+		uint256				_releaseTimestamp;
+		bool				_isWithdrawn;
+		bool				_isApproved;
+		MabbleConflict		 conflict;
 	}
 
 	uint256						public	_nonce;
@@ -73,19 +73,19 @@ contract MabbleEscrow {
 		_MabbleToken = IMabbleToken( MBBLTokenAdress );
 	}
 
-	function initializeConflict( uint256 paymentId, address solver0_, address solver1_)
+	function initializeConflict( uint256 paymentId, address solver0_, address solver1_) external
 	{
-		Payment storage payment = _inProgressPayment[ paymentID ];		
+		Payment storage payment = _inProgressPayment[ paymentId ];		
 		if ( msg.sender != payment._to &&  msg.sender != payment._from )
 			revert ConflictOnTheWrongPayment();
 		address conflict_from = msg.sender;
-		adress conflict_to;
+		address conflict_to;
 		if (conflict_from == payment._from )
 			conflict_to = payment._to;
 		else 
 			conflict_to = payment._from;
-		payment.conflict = new MabbleConflict( address(this), solver0_, solver1_, paymentId, payment._to, conflict_from._from, conflict_to.to );
-		emit ConflictCreate( paymentId, address(payment.conflict) );
+		payment.conflict = new MabbleConflict( address(this), solver0_, solver1_, paymentId, conflict_from, conflict_to );
+		emit ConflictCreated( paymentId, address(payment.conflict) );
 	}
 
 	function getNonce() public view returns ( uint256 )
@@ -98,13 +98,13 @@ contract MabbleEscrow {
 		_MabbleToken.burn( account, value );
 	}
 
-	function conflictRefund( uint256 paymenId, address refundAdress )
+	function conflictRefund( uint256 paymenId, address refundAdress ) external
 	{
 		Payment storage paymentInConflict = _inProgressPayment[paymenId];
-		if ( msg.sender != paymentInConflict.conflict )
+		if ( msg.sender != address(paymentInConflict.conflict) )
 			revert  CallerNotAllowed();
 		if ( paymentInConflict._valueUSDC != 0 )
-			_MabbleToken.transfer(refundAdress, paymentInConflict._valueUSDC)
+			_MabbleToken.transfer(refundAdress, paymentInConflict._valueUSDC);
 		if ( paymentInConflict._valueMBBL != 0 )
 			_USDCToken.transfer(refundAdress, paymentInConflict._valueMBBL);
 	}
@@ -116,7 +116,7 @@ contract MabbleEscrow {
 			revert CallerNotAllowed();
 		if ( payment._isApproved )
 			revert PaimentAlreadyApproved();
-		if ( payment.conflict != address(0) )
+		if ( address(payment.conflict) != address(0) )
 			revert PaymentIsInConflict();
 		payment._isApproved = true;
 		emit ReleaseFund( paymentId );
@@ -128,7 +128,7 @@ contract MabbleEscrow {
 			_MabbleToken.transferFrom( msg.sender, address( this ), MBBLvalue_ );
 		if ( USDCvalue_ != 0 )
 			_USDCToken.transferFrom( msg.sender, address( this ), USDCvalue_ );
-		_inProgressPayment[ _nonce ] = Payment( to_, msg.sender, MBBLvalue_, USDCvalue_, _nonce, block.timestamp, false, false, address(0) );
+		_inProgressPayment[ _nonce ] = Payment( to_, msg.sender, MBBLvalue_, USDCvalue_, _nonce, block.timestamp, false, false, MabbleConflict(address(0)) );
 		balanceMBBL[ to_ ] += MBBLvalue_;
 		balanceUSDC[ to_ ] += USDCvalue_;
 		emit PaymentCreated( _nonce, to_, MBBLvalue_, USDCvalue_, block.timestamp, msg.sender );
@@ -145,13 +145,13 @@ contract MabbleEscrow {
 		for ( uint256 i = 0; i < _paymentId.length; i++ )
 		{
 			Payment storage payment = _inProgressPayment [ _paymentId[ i ] ];
-			if ( payment._to != msg.sender && msg.sender != payment.conflict )
+			if ( payment._to != msg.sender && msg.sender != address(payment.conflict) )
 				revert CallerNotAllowed();
 			if ( payment._isWithdrawn )
 				revert PaimentAlreadyWithdrawn();
 			if ( payment._isApproved == false )
 				revert FundNotReleased();
-			if ( payment.conflict != address(0) )
+			if ( address(payment.conflict) != address(0) && msg.sender != address(payment.conflict) )
 				revert PaymentIsInConflict();
 			totalAmountMBBL += payment._valueMBBL;
 			totalAmountUSDC += payment._valueUSDC;
