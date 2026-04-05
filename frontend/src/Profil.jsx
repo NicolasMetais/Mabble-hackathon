@@ -570,6 +570,9 @@ const Profil = () => {
                   const isClient = req.client_id === user?.id;
                   const isProvider = req.provider_id === user?.id;
 
+                  // Cacher les demandes payées (visible dans Transactions)
+                  if (isPaid || req.request_status === 'finished') return null;
+
                   return (
                   <div key={`req-${req.id}`} style={{ border: "1px solid #eee", padding: 15, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>

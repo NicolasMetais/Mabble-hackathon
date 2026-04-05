@@ -77,4 +77,11 @@ export class PaymentController {
     async conflictCreated(@Body() body: { paymentID: string; conflictAddress: string }) {
         return this.paymentService.onConflictCreated(body);
     }
+
+    // Route interne — appelée par event.ts quand le provider a withdraw
+    @Public()
+    @Post('withdrawn')
+    async withdrawn(@Body() body: { paymentID: string }) {
+        return this.paymentService.onWithdrawn(body);
+    }
 }

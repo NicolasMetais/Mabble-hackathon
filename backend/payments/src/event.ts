@@ -98,4 +98,14 @@ export async function startListening() {
 				}),
 			});
 	});
+	contract.on("Withdraw", (paymentID, to, amountMBBL, amountUSDC, releaseTimestamp, refundTo) => {
+		console.log(`[event] *** Withdraw *** paymentID: ${paymentID}`);
+		fetch(`http://api:4000/payment/withdrawn`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				paymentID: paymentID.toString(),
+			}),
+		}).catch(console.error);
+	});
 }

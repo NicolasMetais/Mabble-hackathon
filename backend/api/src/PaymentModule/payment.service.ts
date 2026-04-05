@@ -218,6 +218,22 @@ export class PaymentService {
     }
 
     // ----------------------------------------------------------------
+    // POST /payment/withdrawn (interne — appelé par event.ts)
+    // Marque la transaction et la request comme terminées
+    // ----------------------------------------------------------------
+    async onWithdrawn(body: { paymentID: string }) {
+        await this.pool.query(
+            `UPDATE transaction SET payment_status = 'finished' WHERE payment_id = $1`,
+            [body.paymentID]
+        );
+        await this.pool.query(
+            `UPDATE request_services SET request_status = 'finished' WHERE payment_id = $1`,
+            [body.paymentID]
+        );
+        return { success: true };
+    }
+
+    // ----------------------------------------------------------------
     // POST /payment/conflictResolved  (interne — appelé par event.ts)
     // Met à jour la transaction et la request quand un conflit est résolu
     // ----------------------------------------------------------------
