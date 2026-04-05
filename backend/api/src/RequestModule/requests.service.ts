@@ -21,8 +21,8 @@ export class RequestsService {
         if (user_id === userId)
             throw new BadRequestException('You cannot request your own service bruh');
         await this.pool.query(
-            'INSERT INTO "request_services"(client_id, service_id, description, price) VALUES($1, $2, $3, $4) RETURNING id',
-            [userId, service_id, dto.description, price]
+            'INSERT INTO "request_services"(client_id, service_id, description, amountMBBL, amountUSDC) VALUES($1, $2, $3, $4, $5) RETURNING id',
+            [userId, service_id, dto.description, dto.amountMBBL, dto.amountUSDC]
         );
         return { "success" : true };
     };
@@ -126,7 +126,7 @@ export class RequestsService {
 
     async getRequest(request_id: number) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.price
+            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id
@@ -141,7 +141,7 @@ export class RequestsService {
 
     async getUserRequests(userId: string) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.price
+            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id
@@ -153,9 +153,9 @@ export class RequestsService {
         return res.rows;
     };
 
-        async getServiceRequests(service_id: number) {
+    async getServiceRequests(service_id: number) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.price
+            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id

@@ -8,5 +8,8 @@ export class CreateServiceDto {
     description: string;
 
     @IsInt()
-    price: number;
+    amountMBBL: number;
+
+    @IsInt()
+    amountUSDC: number;
 }

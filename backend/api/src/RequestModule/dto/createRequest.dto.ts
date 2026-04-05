@@ -8,5 +8,8 @@ export class CreateRequestDto {
     description: string;
 
     @IsInt()
-    price: number;
+    amountMBBL: number;
+
+    @IsInt()
+    amountUSDC: number;
 }

@@ -16,8 +16,8 @@ export class ServicesManager {
                 throw new BadRequestException('Only one service per job');
         }
         await this.pool.query(
-            'INSERT INTO "services"(user_id, jobs_id, description, price) VALUES($1, $2, $3, $4) RETURNING id',
-            [userId, dto.jobs_id, dto.description, dto.price],
+            'INSERT INTO "services" (user_id, jobs_id, description, amountMBBL, amountUSDC) VALUES($1, $2, $3, $4, $5) RETURNING id',
+            [userId, dto.jobs_id, dto.description, dto.amountMBBL, dto.amountUSDC],
         );
         return { "success" : true };
     };
@@ -52,9 +52,13 @@ export class ServicesManager {
             fields.push(`description = $${i++}`);
             values.push(dto.description);
         };
-        if (dto.price) {
-            fields.push(`price = $${i++}`);
-            values.push(dto.price);
+        if (dto.amountMBBL) {
+            fields.push(`amountMBBL = $${i++}`);
+            values.push(dto.amountMBBL);
+        };
+        if (dto.amountUSDC) {
+            fields.push(`amountUSDC = $${i++}`);
+            values.push(dto.amountUSDC);
         };
         values.push(id, userId);
         const query = `UPDATE "services" SET ${fields.join(', ')} WHERE id = $${i++} AND user_id = $${i++}`

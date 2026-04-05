@@ -10,7 +10,8 @@ const EditServices = () => {
   const [formData, setFormData] = useState({
     jobs_id: "",
     description: "",
-    price: "",
+    amountMBBL: "",
+    amountUSDC: "",
   });
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const EditServices = () => {
       }
 
       const data = await res.json();
+      console.log(data);
       setServices(data);
     } catch (e) {
       setError(e.message);
@@ -60,7 +62,8 @@ const EditServices = () => {
         body: JSON.stringify({
           jobs_id: parseInt(formData.jobs_id),
           description: formData.description,
-          price: parseInt(formData.price),
+          amountMBBL: parseInt(formData.amountMBBL),
+          amountUSDC: parseInt(formData.amountUSDC)
         }),
       });
 
@@ -68,7 +71,7 @@ const EditServices = () => {
         throw new Error("Failed to add service");
       }
 
-      setFormData({ jobs_id: "", description: "", price: "" });
+      setFormData({ jobs_id: "", description: "", amountMBBL: "", amountUSDC: "" });
       setShowForm(false);
       fetchServices(); // Refresh list
     } catch (e) {
@@ -113,11 +116,20 @@ const EditServices = () => {
             />
           </div>
           <div>
-            <label>Price:</label>
+            <label> Mabble coins:</label>
             <input
               type="number"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              value={formData.amountMBBL}
+              onChange={(e) => setFormData({ ...formData, amountMBBL: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label>USDC:</label>
+            <input
+              type="number"
+              value={formData.amountUSDC}
+              onChange={(e) => setFormData({ ...formData, amountUSDC: e.target.value })}
               required
             />
           </div>
@@ -129,7 +141,7 @@ const EditServices = () => {
       <ul style={{ marginTop: "20px" }}>
         {services.map((service) => (
           <li key={service.id} style={{ cursor: "pointer", marginBottom: "10px" }} onClick={() => handleServiceClick(service)}>
-            Service ID: {service.id} - Job ID: {service.jobs_id} - Price: {service.price}
+            Service ID: {service.id} - Job ID: {service.jobs_id} - Mabble Coins: {service.amountmbbl} - USDC: {service.amountusdc}
           </li>
         ))}
       </ul>
@@ -140,7 +152,8 @@ const EditServices = () => {
           <p><strong>ID:</strong> {selectedService.id}</p>
           <p><strong>Job ID:</strong> {selectedService.jobs_id}</p>
           <p><strong>Description:</strong> {selectedService.description}</p>
-          <p><strong>Price:</strong> {selectedService.price}</p>
+          <p><strong>Mabble Coins:</strong> {selectedService.amountmbbl}</p>
+          <p><strong>USDC:</strong> {selectedService.amountusdc}</p>
           <button onClick={closeDetails}>Close</button>
         </div>
       )}

@@ -11,5 +11,9 @@ export class UpdateAServiceDto {
 
     @IsOptional()
     @IsInt()
-    price: number;
+    amountMBBL: number;
+
+    @IsOptional()
+    @IsInt()
+    amountUSDC: number;
 }
