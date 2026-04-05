@@ -9,7 +9,7 @@ import { getUserWallet } from "./utils";
 import { getUserBalance } from "./utils";
 import { releaseFund } from "./token_interaction";
 import { withdraw } from "./token_interaction";
-import { initateDispute } from "./dispute";
+import { initateDispute, voteDispute } from "./dispute";
 import { startListening } from './event';
 
 startListening();
@@ -96,6 +96,18 @@ app.post("/initializeDispute", async ( req : any, res : any ) =>
 	}
 	catch ( error : any )
 	{
+		res.status(400).json({ error: error.message });
+	}
+});
+
+app.post("/vote", async (req: any, res: any) => {
+	try {
+		const { fromWalletId, userToken, conflictAddress, voteForClient } = req.body;
+		if (!fromWalletId || !userToken || !conflictAddress || voteForClient === undefined)
+			throw new Error("fromWalletId || userToken || conflictAddress || voteForClient : undefined.");
+		const challengeId = await voteDispute(fromWalletId, userToken, conflictAddress, voteForClient);
+		res.status(200).json(challengeId);
+	} catch (error: any) {
 		res.status(400).json({ error: error.message });
 	}
 });
