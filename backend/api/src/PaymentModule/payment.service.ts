@@ -4,6 +4,8 @@ import { PayDto } from './dto/pay.dto';
 import { DisputeDto } from './dto/dispute.dto';
 import { PaymentCreatedDto } from './dto/payment-created.dto';
 import { ReleaseFundDto } from './dto/release-fund.dto';
+import { WithdrawDto } from './dto/withdraw.dto';
+import { VoteDto } from './dto/vote.dto';
 
 const PAYMENTS_URL = process.env.PAYMENTS_URL ?? 'http://payments:4001';
 
@@ -55,7 +57,7 @@ export class PaymentService {
                 UUID,
             }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         if (!response.ok)
             throw new BadRequestException(data?.error ?? 'Payment microservice error');
 
@@ -75,14 +77,32 @@ export class PaymentService {
     async dispute(userId: string, dto: DisputeDto) {
         // Vérifier que la request associée concerne bien cet utilisateur
         const req = await this.pool.query(
-            `SELECT rs.id FROM request_services AS rs
+            `SELECT rs.id, rs.client_id, s.user_id as provider_id FROM request_services AS rs
              JOIN services AS s ON rs.service_id = s.id
-             WHERE rs.payment_id IS NOT NULL
-               AND (rs.client_id = $1 OR s.user_id = $1)
+             WHERE rs.payment_id = $1
+               AND (rs.client_id = $2 OR s.user_id = $2)
              LIMIT 1`,
-            [userId],
+            [String(dto.paymentId), userId],
         );
-        // Note : on pourrait affiner en passant requestId dans le DTO — keep it simple pour l'instant
+        if (req.rowCount === 0) {
+            throw new BadRequestException("Request not found or not yours");
+        }
+        
+        const clientId = req.rows[0].client_id;
+        const providerId = req.rows[0].provider_id;
+
+        // Choix de 2 arbitres aléatoires
+        const solvers = await this.pool.query(
+            `SELECT id, wallet_address FROM users 
+             WHERE id != $1 AND id != $2 AND wallet_address IS NOT NULL
+             ORDER BY RANDOM() LIMIT 2`,
+            [clientId, providerId]
+        );
+        if ((solvers.rowCount ?? 0) < 2) {
+            throw new BadRequestException("Not enough solvers available in the platform");
+        }
+        const solver0 = solvers.rows[0];
+        const solver1 = solvers.rows[1];
 
         const response = await fetch(`${PAYMENTS_URL}/initializeDispute`, {
             method: 'POST',
@@ -91,11 +111,11 @@ export class PaymentService {
                 fromWalletId: dto.fromWalletId,
                 userToken: dto.userToken,
                 paymentId: dto.paymentId,
-                solver0: dto.solver0,
-                solver1: dto.solver1,
+                solver0: solver0.wallet_address,
+                solver1: solver1.wallet_address,
             }),
         });
-        const data = await response.json();
+        const data: any = await response.json();
         if (!response.ok)
             throw new BadRequestException(data?.error ?? 'Dispute microservice error');
 
@@ -103,6 +123,12 @@ export class PaymentService {
         await this.pool.query(
             `UPDATE transaction SET payment_status = 'conflict' WHERE payment_id = $1`,
             [String(dto.paymentId)],
+        );
+
+        // Ajouter les arbitres dans la table disputes
+        await this.pool.query(
+            `INSERT INTO disputes (payment_id, solver0_id, solver1_id) VALUES ($1, $2, $3)`,
+            [String(dto.paymentId), solver0.id, solver1.id]
         );
 
         return data; // { challengeId }
@@ -209,6 +235,74 @@ export class PaymentService {
             [body.paymentID],
         );
 
+        return { success: true };
+    }
+
+    // ----------------------------------------------------------------
+    // GET /payment/transactions
+    // ----------------------------------------------------------------
+    async getTransactions(userId: string) {
+        const res = await this.pool.query(
+            `SELECT * FROM transaction WHERE client_id = $1 OR provider_id = $1 ORDER BY created_at DESC`,
+            [userId]
+        );
+        return res.rows;
+    }
+
+    // ----------------------------------------------------------------
+    // GET /payment/arbitrations
+    // ----------------------------------------------------------------
+    async getArbitrations(userId: string) {
+        const res = await this.pool.query(
+            `SELECT t.*, d.solver0_id, d.solver1_id 
+             FROM transaction t
+             JOIN disputes d ON t.payment_id = d.payment_id
+             WHERE (d.solver0_id = $1 OR d.solver1_id = $1)
+               AND t.payment_status = 'conflict'
+             ORDER BY t.created_at DESC`,
+            [userId]
+        );
+        return res.rows;
+    }
+
+    // ----------------------------------------------------------------
+    // POST /payment/withdraw
+    // ----------------------------------------------------------------
+    async withdraw(userId: string, dto: WithdrawDto) {
+        const response = await fetch(`${PAYMENTS_URL}/withdraw`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dto),
+        });
+        const data: any = await response.json();
+        if (!response.ok)
+            throw new BadRequestException(data?.error ?? 'Withdraw microservice error');
+        return data; // { challengeId }
+    }
+
+    // ----------------------------------------------------------------
+    // POST /payment/vote
+    // ----------------------------------------------------------------
+    async vote(userId: string, dto: VoteDto) {
+        const response = await fetch(`${PAYMENTS_URL}/vote`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dto),
+        });
+        const data: any = await response.json();
+        if (!response.ok)
+            throw new BadRequestException(data?.error ?? 'Vote microservice error');
+        return data; // { challengeId }
+    }
+
+    // ----------------------------------------------------------------
+    // POST /payment/conflictCreated
+    // ----------------------------------------------------------------
+    async onConflictCreated(body: { paymentID: string; conflictAddress: string }) {
+        await this.pool.query(
+            `UPDATE transaction SET conflict_address = $2 WHERE payment_id = $1`,
+            [body.paymentID, body.conflictAddress]
+        );
         return { success: true };
     }
 }

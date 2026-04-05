@@ -45,6 +45,16 @@ export async function startListening() {
 	contract.on("ConflictCreated", (paymentID, _conflictAddress) => {
 		console.log(` paymentID : ${paymentID}`);
 		console.log(` _conflictAddress : ${_conflictAddress} `)
+
+		fetch(`http://api:4000/payment/conflictCreated`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				paymentID: paymentID.toString(),
+				conflictAddress: _conflictAddress
+			})
+		}).catch(console.error);
+
 		createConflictListener(_conflictAddress);
 	});
 	console.log("Conflict Initialiser Listner On");

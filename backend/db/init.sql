@@ -90,6 +90,13 @@ CREATE TABLE transaction (
 ALTER TABLE request_services
     ADD CONSTRAINT fk_payment_id FOREIGN KEY (payment_id) REFERENCES transaction(payment_id) ON DELETE SET NULL;
 
+CREATE TABLE disputes (
+    id SERIAL PRIMARY KEY,
+    payment_id TEXT UNIQUE REFERENCES transaction(payment_id) ON DELETE CASCADE,
+    solver0_id UUID REFERENCES users(id),
+    solver1_id UUID REFERENCES users(id)
+);
+
 -- Table de mapping temporaire : relie (from_wallet, to_wallet) → request_id
 -- Peuplée lors du /pay, consommée à la réception de PaymentCreated
 CREATE TABLE payment_pending (
