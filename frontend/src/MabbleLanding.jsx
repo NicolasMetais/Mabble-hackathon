@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import SearchBar from "./SearchBar.jsx";
 
 // ─── DATA ───────────────────────────────────────────────
 const freelancers = [
@@ -44,7 +45,9 @@ const avatarColors = ["#E8E8E8", "#D4D4D4", "#C0C0C0", "#ACACAC", "#989898"];
 const getAvatarColor = (name) => avatarColors[name.length % avatarColors.length];
 
 export default function MabbleLanding() {
-  const [searchVal, setSearchVal] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
   const carousel1Ref = useRef(null);
   const carousel2Ref = useRef(null);
 
@@ -87,7 +90,7 @@ export default function MabbleLanding() {
           {f.available ? "Available" : "Busy"}
         </div>
       </div>
-      <div style={s.cardDesc}>Creating immersive experiences that wow</div>
+      <div style={s.cardDesc}>{f.description ?? "Creating immersive experiences that wow"}</div>
       <div style={s.cardSkills}>
         {f.skills.map((sk, i) => <span key={i} style={s.skillTag}>{sk}</span>)}
       </div>
@@ -97,6 +100,28 @@ export default function MabbleLanding() {
       </div>
     </div>
   );
+
+  const serviceToCard = (service) => ({
+    name: service.first_name && service.last_name ? `${service.first_name} ${service.last_name}` : `Service #${service.id}`,
+    role: `Job ${service.jobs_id}`,
+    skills: Array.isArray(service.skills) ? service.skills : service.skills ? String(service.skills).split(',').map((skill) => skill.trim()) : [],
+    rating: service.amountMBBL ? Number(service.amountMBBL) : service.amountmbbl ? Number(service.amountmbbl) : 4.5,
+    reviews: service.amountUSDC ? Math.max(10, Number(service.amountUSDC) * 3) : 12,
+    credits: service.amountMBBL ?? service.amountmbbl ?? 0,
+    available: true,
+    description: service.description,
+  });
+
+  const isSearching = searchQuery.trim() !== "";
+  const carousel1Cards = isSearching
+    ? searchResults.filter((_, index) => index % 2 === 0).map(serviceToCard)
+    : [...freelancers, ...freelancers];
+
+  const carousel2Cards = isSearching
+    ? searchResults.filter((_, index) => index % 2 === 1).map(serviceToCard)
+    : [...freelancers2, ...freelancers2];
+
+  const noResultsFound = isSearching && !searchLoading && searchResults.length === 0;
 
   return (
     <div style={s.page}>
@@ -109,9 +134,14 @@ export default function MabbleLanding() {
         </h1>
         <p style={s.heroSub}>Trade your skills and build projects with other creatives</p>
 
-        <div style={s.searchWrap}>
-          <input style={s.searchInput} placeholder="Search for a skill or creative..." value={searchVal} onChange={e => setSearchVal(e.target.value)} />
-          <div style={s.searchArrow}>→</div>
+        <div style={{ margin: "0 auto 28px", maxWidth: 720 }}>
+          <SearchBar
+            onResults={setSearchResults}
+            onQuery={setSearchQuery}
+            onLoading={setSearchLoading}
+            showInlineResults={false}
+            placeholder="Search skills, nom, prenom, tags..."
+          />
         </div>
         <div style={s.categoryRow}>
           {categories.map((c, i) => <span key={i} style={s.categoryTag}>{c}</span>)}
@@ -119,18 +149,37 @@ export default function MabbleLanding() {
       </section>
 
       {/* CAROUSEL 1 */}
-      <section style={s.carouselSection}>
-        <div ref={carousel1Ref} style={s.carouselTrack}>
-          {[...freelancers, ...freelancers].map((f, i) => <FreelancerCard key={`a${i}`} f={f} />)}
-        </div>
-      </section>
+      {noResultsFound ? (
+        <section style={s.noResultsSection}>
+          <div style={s.noResultsMessage}>Aucun résultat trouvé pour « {searchQuery} »</div>
+        </section>
+      ) : (
+        <>
+          <section style={s.carouselSection}>
+            <div
+              ref={carousel1Ref}
+              style={{
+                ...s.carouselTrack,
+                justifyContent: carousel1Cards.length <= 2 ? "center" : "flex-start",
+              }}
+            >
+              {carousel1Cards.map((f, i) => <FreelancerCard key={`a${i}`} f={f} />)}
+            </div>
+          </section>
 
-      {/* CAROUSEL 2 */}
-      <section style={{ ...s.carouselSection, marginTop: 16 }}>
-        <div ref={carousel2Ref} style={s.carouselTrack}>
-          {[...freelancers2, ...freelancers2].map((f, i) => <FreelancerCard key={`b${i}`} f={f} />)}
-        </div>
-      </section>
+          <section style={{ ...s.carouselSection, marginTop: 16 }}>
+            <div
+              ref={carousel2Ref}
+              style={{
+                ...s.carouselTrack,
+                justifyContent: carousel2Cards.length <= 2 ? "center" : "flex-start",
+              }}
+            >
+              {carousel2Cards.map((f, i) => <FreelancerCard key={`b${i}`} f={f} />)}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* STATS */}
       <section style={s.statsBar}>
@@ -261,6 +310,8 @@ const s = {
 
   carouselSection: { padding: 0, overflow: "hidden", marginTop: 24 },
   carouselTrack: { display: "flex", gap: "16px", overflow: "hidden", padding: "8px 0" },
+  noResultsSection: { padding: "40px 0", textAlign: "center" },
+  noResultsMessage: { fontSize: "18px", color: "#555", fontWeight: 600 },
 
   card: { minWidth: "280px", maxWidth: "280px", border: "1px solid #E0E0E0", borderRadius: "12px", padding: "20px", background: "#FFFFFF", flexShrink: 0 },
   cardTop: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" },

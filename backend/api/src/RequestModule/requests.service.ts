@@ -1,7 +1,6 @@
 import { Injectable, Inject, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg'
 import { CreateRequestDto } from './dto/createRequest.dto';
-import { request } from 'http';
 
 @Injectable()
 export class RequestsService {

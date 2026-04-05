@@ -15,6 +15,12 @@ export class ServicesController {
         return this.ServicesManager.getUserServices(req.user.userId);
     };
 
+    @Get('search')
+    @Public()
+    async searchServices(@Query('q') query?: string) {
+        return this.ServicesManager.searchServices(query);
+    };
+
     @Post()
     async createService(@Req() req: any, @Body() dto: CreateServiceDto) {
         return this.ServicesManager.createService(req.user.userId, dto);

@@ -3,7 +3,6 @@ import { Pool } from 'pg'
 import { CreateServiceDto } from './dto/createService.dto';
 import { UpdateAServiceDto } from './dto/updateAService.dto';
 import { CreateRequestDto } from './dto/createRequest.dto';
-import { request } from 'http';
 
 @Injectable()
 export class ServicesManager {
@@ -26,7 +25,30 @@ export class ServicesManager {
         const res = await this.pool.query(
             'SELECT * FROM services WHERE user_id = $1', [userId],
         );
-        console.log(res.rows);
+        return res.rows;
+    };
+
+    async searchServices(query?: string) {
+        if (!query || query.trim() === '') {
+            return [];
+        }
+
+        const searchTerm = `%${query.trim()}%`;
+        const res = await this.pool.query(
+            `SELECT s.*, u.first_name, u.last_name, a.skills
+             FROM services AS s
+             LEFT JOIN users AS u ON u.id = s.user_id
+             LEFT JOIN admission_forms AS a ON a.user_id = u.id
+             WHERE s.description ILIKE $1
+               OR CAST(s.jobs_id AS TEXT) ILIKE $1
+               OR CAST(s.amountMBBL AS TEXT) ILIKE $1
+               OR CAST(s.amountUSDC AS TEXT) ILIKE $1
+               OR concat_ws(' ', u.first_name, u.last_name) ILIKE $1
+               OR concat_ws(' ', u.last_name, u.first_name) ILIKE $1
+               OR CAST(a.skills AS TEXT) ILIKE $1
+             LIMIT 100`,
+            [searchTerm],
+        );
         return res.rows;
     };
 
