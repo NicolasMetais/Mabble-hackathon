@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function SearchBar({ onResults, onQuery, onLoading, showInlineResults = true, placeholder = "Search for a skill or creative..." }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,6 +55,16 @@ export default function SearchBar({ onResults, onQuery, onLoading, showInlineRes
 
   const showNoResults = query.trim() !== "" && !loading && !error && results.length === 0;
 
+  const goToUserProfile = (service) => {
+    if (!service?.user_id) return;
+    navigate(`/profil?userId=${service.user_id}`);
+  };
+
+  const goToCollaborate = (service) => {
+    if (!service?.user_id) return;
+    navigate(`/profil?userId=${service.user_id}&action=collaborate`);
+  };
+
   return (
     <div style={styles.wrapper}>
       <form onSubmit={handleSubmit} style={styles.searchBar}>
@@ -84,7 +97,7 @@ export default function SearchBar({ onResults, onQuery, onLoading, showInlineRes
           </div>
           <div style={styles.resultsTrack}>
             {results.map((service) => (
-              <div key={service.id} style={styles.resultCard}>
+              <div key={service.id} style={{ ...styles.resultCard, cursor: "pointer" }} onClick={() => setSelectedService(service)}>
                 <div style={styles.cardTop}>
                   <div style={styles.cardTitle}>Service #{service.id}</div>
                   <div style={styles.cardBadge}>Job {service.jobs_id}</div>
@@ -94,6 +107,26 @@ export default function SearchBar({ onResults, onQuery, onLoading, showInlineRes
                 {service.skills && (
                   <div style={styles.cardSkills}>Skills: {Array.isArray(service.skills) ? service.skills.join(', ') : String(service.skills)}</div>
                 )}
+                <div style={styles.cardActions}>
+                  <button
+                    style={styles.actionButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToCollaborate(service);
+                    }}
+                  >
+                    Collaborate
+                  </button>
+                  <button
+                    style={{ ...styles.actionButton, ...styles.actionButtonPrimary }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToUserProfile(service);
+                    }}
+                  >
+                    View Profile
+                  </button>
+                </div>
                 <div style={styles.cardFooter}>
                   <span>Mabble: {service.amountmbbl ?? service.amountMBBL}</span>
                   <span>USDC: {service.amountusdc ?? service.amountUSDC}</span>
@@ -101,6 +134,23 @@ export default function SearchBar({ onResults, onQuery, onLoading, showInlineRes
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {selectedService && (
+        <div style={styles.detailPanel}>
+          <div style={styles.detailHeader}>
+            <div style={styles.detailTitle}>Détails du service</div>
+            <button style={styles.detailClose} onClick={() => setSelectedService(null)}>Fermer</button>
+          </div>
+          <div style={styles.detailRow}><strong>ID :</strong> {selectedService.id}</div>
+          <div style={styles.detailRow}><strong>Job :</strong> {selectedService.jobs_id}</div>
+          <div style={styles.detailRow}><strong>Prestataire :</strong> {selectedService.first_name ?? "-"} {selectedService.last_name ?? ""}</div>
+          <div style={styles.detailRow}><strong>Description :</strong> {selectedService.description}</div>
+          {selectedService.skills && (
+            <div style={styles.detailRow}><strong>Skills :</strong> {Array.isArray(selectedService.skills) ? selectedService.skills.join(', ') : String(selectedService.skills)}</div>
+          )}
+          <div style={styles.detailRow}><strong>Mabble :</strong> {selectedService.amountmbbl ?? selectedService.amountMBBL}</div>
+          <div style={styles.detailRow}><strong>USDC :</strong> {selectedService.amountusdc ?? selectedService.amountUSDC}</div>
         </div>
       )}
     </div>
@@ -231,6 +281,30 @@ const styles = {
     color: "#dcdcdc",
   },
 
+  cardActions: {
+    marginTop: 14,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  actionButton: {
+    flex: 1,
+    padding: "10px 12px",
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.08)",
+    color: "#ffffff",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  actionButtonPrimary: {
+    background: "#ffffff",
+    color: "#111111",
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+
   cardFooter: {
     marginTop: "auto",
     display: "flex",
@@ -238,5 +312,45 @@ const styles = {
     fontSize: 13,
     fontWeight: 600,
     color: "#ffffff",
+  },
+
+  detailPanel: {
+    marginTop: 20,
+    width: "100%",
+    maxWidth: "700px",
+    padding: "18px",
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.15)",
+    background: "rgba(255,255,255,0.08)",
+    color: "white",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.12)",
+  },
+
+  detailHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: 700,
+  },
+
+  detailClose: {
+    border: "none",
+    background: "#ffffff",
+    color: "#111",
+    borderRadius: 999,
+    padding: "8px 14px",
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+
+  detailRow: {
+    marginBottom: 10,
+    fontSize: 14,
+    color: "#f5f5f5",
   },
 };

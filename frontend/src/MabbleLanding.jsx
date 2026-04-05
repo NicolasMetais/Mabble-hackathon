@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import SearchBar from "./SearchBar.jsx";
 
 // ─── DATA ───────────────────────────────────────────────
@@ -45,9 +46,11 @@ const avatarColors = ["#E8E8E8", "#D4D4D4", "#C0C0C0", "#ACACAC", "#989898"];
 const getAvatarColor = (name) => avatarColors[name.length % avatarColors.length];
 
 export default function MabbleLanding() {
+  const navigate = useNavigate();
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
   const carousel1Ref = useRef(null);
   const carousel2Ref = useRef(null);
 
@@ -78,8 +81,8 @@ export default function MabbleLanding() {
     return () => { cancelAnimationFrame(anim1); cancelAnimationFrame(anim2); };
   }, []);
 
-  const FreelancerCard = ({ f }) => (
-    <div style={s.card}>
+  const FreelancerCard = ({ f, onClick, onViewProfile, onCollaborate }) => (
+    <div style={{ ...s.card, cursor: f.serviceId ? "pointer" : "default" }} onClick={onClick}>
       <div style={s.cardTop}>
         <div style={{ ...s.avatar, background: getAvatarColor(f.name) }}>{getInitials(f.name)}</div>
         <div style={s.cardInfo}>
@@ -94,6 +97,28 @@ export default function MabbleLanding() {
       <div style={s.cardSkills}>
         {f.skills.map((sk, i) => <span key={i} style={s.skillTag}>{sk}</span>)}
       </div>
+      {f.userId && (
+        <div style={s.cardActions}>
+          <button
+            style={s.cardActionButton}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCollaborate?.(f);
+            }}
+          >
+            Collaborate
+          </button>
+          <button
+            style={{ ...s.cardActionButton, ...s.cardActionPrimary }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile?.(f);
+            }}
+          >
+            View Profile
+          </button>
+        </div>
+      )}
       <div style={s.cardBottom}>
         <div style={s.cardRating}>★ {f.rating}<span style={s.reviewCount}>({f.reviews} reviews)</span></div>
         <div style={s.cardCredits}>{f.credits} Credits</div>
@@ -110,6 +135,9 @@ export default function MabbleLanding() {
     credits: service.amountMBBL ?? service.amountmbbl ?? 0,
     available: true,
     description: service.description,
+    serviceId: service.id,
+    userId: service.user_id ?? service.userId ?? null,
+    rawService: service,
   });
 
   const isSearching = searchQuery.trim() !== "";
@@ -148,6 +176,27 @@ export default function MabbleLanding() {
         </div>
       </section>
 
+      {selectedService && (
+        <section style={s.serviceDetailSection}>
+          <div style={s.serviceDetailCard}>
+            <div style={s.serviceDetailHeader}>
+              <div>
+                <div style={s.serviceDetailTitle}>Détails du service</div>
+                <div style={s.serviceDetailSubtitle}>Service #{selectedService.id} — Job {selectedService.jobs_id}</div>
+              </div>
+              <button style={s.serviceDetailClose} onClick={() => setSelectedService(null)}>Fermer</button>
+            </div>
+            <div style={s.serviceDetailRow}><strong>Prestataire :</strong> {selectedService.first_name ?? "-"} {selectedService.last_name ?? ""}</div>
+            <div style={s.serviceDetailRow}><strong>Description :</strong> {selectedService.description}</div>
+            {selectedService.skills && (
+              <div style={s.serviceDetailRow}><strong>Skills :</strong> {Array.isArray(selectedService.skills) ? selectedService.skills.join(', ') : String(selectedService.skills)}</div>
+            )}
+            <div style={s.serviceDetailRow}><strong>Mabble :</strong> {selectedService.amountmbbl ?? selectedService.amountMBBL}</div>
+            <div style={s.serviceDetailRow}><strong>USDC :</strong> {selectedService.amountusdc ?? selectedService.amountUSDC}</div>
+          </div>
+        </section>
+      )}
+
       {/* CAROUSEL 1 */}
       {noResultsFound ? (
         <section style={s.noResultsSection}>
@@ -163,7 +212,15 @@ export default function MabbleLanding() {
                 justifyContent: carousel1Cards.length <= 2 ? "center" : "flex-start",
               }}
             >
-              {carousel1Cards.map((f, i) => <FreelancerCard key={`a${i}`} f={f} />)}
+              {carousel1Cards.map((f, i) => (
+                <FreelancerCard
+                  key={`a${i}`}
+                  f={f}
+                  onClick={() => f.serviceId && setSelectedService(f.rawService)}
+                  onViewProfile={(card) => navigate(`/profil?userId=${card.userId}`)}
+                  onCollaborate={(card) => navigate(`/profil?userId=${card.userId}&action=collaborate`)}
+                />
+              ))}
             </div>
           </section>
 
@@ -175,7 +232,15 @@ export default function MabbleLanding() {
                 justifyContent: carousel2Cards.length <= 2 ? "center" : "flex-start",
               }}
             >
-              {carousel2Cards.map((f, i) => <FreelancerCard key={`b${i}`} f={f} />)}
+              {carousel2Cards.map((f, i) => (
+                <FreelancerCard
+                  key={`b${i}`}
+                  f={f}
+                  onClick={() => f.serviceId && setSelectedService(f.rawService)}
+                  onViewProfile={(card) => navigate(`/profil?userId=${card.userId}`)}
+                  onCollaborate={(card) => navigate(`/profil?userId=${card.userId}&action=collaborate`)}
+                />
+              ))}
             </div>
           </section>
         </>
@@ -312,6 +377,13 @@ const s = {
   carouselTrack: { display: "flex", gap: "16px", overflow: "hidden", padding: "8px 0" },
   noResultsSection: { padding: "40px 0", textAlign: "center" },
   noResultsMessage: { fontSize: "18px", color: "#555", fontWeight: 600 },
+  serviceDetailSection: { padding: "24px 0", maxWidth: "900px", margin: "0 auto" },
+  serviceDetailCard: { padding: "24px", borderRadius: "20px", border: "1px solid #E0E0E0", background: "#fff", boxShadow: "0 18px 40px rgba(0,0,0,0.06)" },
+  serviceDetailHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "18px" },
+  serviceDetailTitle: { fontSize: "22px", fontWeight: 800, marginBottom: "4px" },
+  serviceDetailSubtitle: { fontSize: "14px", color: "#777" },
+  serviceDetailClose: { border: "none", background: "#111", color: "#fff", padding: "10px 18px", borderRadius: "999px", cursor: "pointer", fontWeight: 700 },
+  serviceDetailRow: { marginBottom: "12px", fontSize: "15px", color: "#444", lineHeight: 1.6 },
 
   card: { minWidth: "280px", maxWidth: "280px", border: "1px solid #E0E0E0", borderRadius: "12px", padding: "20px", background: "#FFFFFF", flexShrink: 0 },
   cardTop: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" },
@@ -323,6 +395,9 @@ const s = {
   cardDesc: { fontSize: "13px", color: "#777", marginBottom: "12px", lineHeight: 1.4 },
   cardSkills: { display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" },
   skillTag: { padding: "4px 10px", border: "1px solid #E0E0E0", borderRadius: "4px", fontSize: "11px", color: "#555" },
+  cardActions: { display: "flex", gap: "10px", marginBottom: "14px" },
+  cardActionButton: { flex: 1, padding: "10px 12px", borderRadius: "999px", border: "1px solid #E0E0E0", background: "#FFF", color: "#1A1A1A", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
+  cardActionPrimary: { background: "#111", color: "#FFF", borderColor: "#111" },
   cardBottom: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid #F0F0F0" },
   cardRating: { fontSize: "13px", fontWeight: 500, color: "#1A1A1A" },
   reviewCount: { fontSize: "12px", color: "#AAA", fontWeight: 400, marginLeft: "4px" },

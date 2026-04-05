@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Cookies from "js-cookie";
 import Header from "./Header.jsx";
 
 const Profil = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const profileUserId = new URLSearchParams(location.search).get("userId") || location.state?.profileUserId;
+  const actionMode = new URLSearchParams(location.search).get("action") || location.state?.action;
 
   // State pour les données utilisateur venant du backend
   const [user, setUser] = useState(null);
@@ -19,22 +22,33 @@ const Profil = () => {
     const fetchProfile = async () => {
       try {
         const token = Cookies.get("authToken");
-        if (!token) {
-          // Pas de token → on affiche la page avec les données par défaut
-          setLoading(false);
-          return;
+        let res;
+
+        if (profileUserId) {
+          res = await fetch(`http://localhost:4000/users/${profileUserId}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+        } else {
+          if (!token) {
+            // Pas de token → on affiche la page avec les données par défaut
+            setLoading(false);
+            return;
+          }
+
+          res = await fetch("http://localhost:4000/users/me", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+          });
         }
 
-        const res = await fetch("http://localhost:4000/users/me", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${Cookies.get("authToken")}`,
-          },
-        });
-
         if (!res.ok) {
-          if (res.status === 401) {
+          if (res.status === 401 && !profileUserId) {
             // Token expiré ou invalide
             Cookies.remove("authToken");
           }
@@ -51,7 +65,7 @@ const Profil = () => {
     };
 
     fetchProfile();
-  }, [navigate]);
+  }, [profileUserId]);
 
   const styles = {
     page: {
@@ -343,6 +357,11 @@ const Profil = () => {
           <h1 style={styles.name}>
             {user ? `${user.first_name} ${user.last_name}` : "Utilisateur"}
           </h1>
+          {actionMode === "collaborate" && (
+            <p style={{ marginTop: 8, fontSize: 15, color: "#4b5563" }}>
+              Mode collaboration activé pour ce profil.
+            </p>
+          )}
           <p style={styles.title}>
             {user?.job_name || "Poste non renseigné"}
           </p>

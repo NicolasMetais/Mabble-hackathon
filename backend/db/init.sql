@@ -113,7 +113,19 @@ CREATE UNIQUE INDEX unique_active_request
 ON request_services (client_id, service_id)
 WHERE request_status IN ('pending', 'accepted');
 
-INSERT INTO jobs (name) VALUES ('Developper') ON CONFLICT (name) DO NOTHING;
-INSERT INTO jobs (name) VALUES ('3D Artists') ON CONFLICT (name) DO NOTHING;
+INSERT INTO jobs (name) VALUES 
+('Frontend Developer'),
+('Backend Developer'),
+('Full Stack Developer'),
+('DevOps Engineer'),
+('Data Scientist'),
+('Data Engineer'),
+('Machine Learning Engineer'),
+('Cybersecurity Analyst'),
+('Cloud Architect'),
+('Mobile Developer'),
+('UI/UX Designer'),
+('QA Engineer')
+ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO test_ping (message) VALUES ('PING DE LA BDD');
