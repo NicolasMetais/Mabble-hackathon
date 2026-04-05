@@ -30,6 +30,18 @@ export class ServicesManager {
         return res.rows;
     };
 
+    async getAllServices() {
+        const res = await this.pool.query(
+            `SELECT s.id, s.description, s.amountmbbl as "amountMBBL", s.amountusdc as "amountUSDC", s.is_active,
+                    u.id as user_id, u.first_name, u.last_name, u.wallet_address,
+                    j.name as role
+             FROM services s
+             JOIN users u ON s.user_id = u.id
+             LEFT JOIN jobs j ON s.jobs_id = j.id`
+        );
+        return res.rows;
+    };
+
     async getAService(id: number) {
         const res = await this.pool.query(
             'SELECT * FROM services WHERE id = $1', [id],

@@ -28,40 +28,115 @@ export default function Login() {
   const [deviceEncryptionKey, setDeviceEncryptionKey] = useState(null);
   const [otpToken, setOtpToken] = useState(null);
 
-  // Initialize SDK with onLoginComplete callback
   useEffect(() => {
-    const onLoginComplete = (error, result) => {
+    const onLoginComplete = async (error, result) => {
       console.log("🔐 onLoginComplete callback - error:", error, "result:", result);
 
       if (error) {
         console.error("❌ OTP verification error:", error);
         setError("OTP verification failed: " + (error.message || "Unknown error"));
-        setOtpStep("sent"); // Go back to being able to retry
+        setOtpStep("sent");
         return;
       }
 
       console.log("✅ OTP verified, got userToken");
       const { userToken, encryptionKey } = result;
+      Cookies.set("circleUserToken", userToken, { expires: 1/24, sameSite: "Strict" });
+      Cookies.set("encryptionKey", encryptionKey, { expires: 1/24, sameSite: "Strict" });
 
-      // Now initialize wallet
-      console.log("🔄 Initializing wallet...");
+      // Vérifier si l'utilisateur a déjà un wallet en DB
+      const authToken = Cookies.get("authToken");
+      let hasWallet = false;
+      try {
+        const meRes = await fetch("http://localhost:4000/users/me", {
+          headers: { "Authorization": `Bearer ${authToken}` }
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          hasWallet = !!(me.wallet_id && me.wallet_id !== "");
+          console.log("👛 User has wallet:", hasWallet, "wallet_id:", me.wallet_id);
+        }
+      } catch(e) {
+        console.error("❌ Failed to check wallet:", e);
+      }
+
+      // --- Utilisateur existant avec wallet → juste naviguer ---
+      if (hasWallet) {
+        console.log("✅ Existing user with wallet, skipping initialization");
+        setOtpStep("success");
+        navigate("/");
+        return;
+      }
+
+      // --- Nouveau utilisateur → full flow : initialize + addWallet + welcome ---
+      console.log("🔄 New user, initializing wallet...");
       fetch("http://localhost:4000/initializeWallet", {
         method: "POST",
         headers: {
           "Content-type" : "application/json",
-          "Authorization" : `Bearer ${Cookies.get("authToken")}`,
+          "Authorization" : `Bearer ${authToken}`,
         },
         body: JSON.stringify({ userToken }),
       })
         .then(res => res.json())
         .then(walletData => {
-          console.log("📊 Wallet response:", walletData);
+          console.log("📊 initializeWallet response:", walletData);
           if (!walletData.challengeId) {
-            throw new Error("No challengeId in wallet response");
+            // Circle dit que le user est déjà initialisé → naviguer directement
+            console.log("ℹ️ No challengeId (user may already exist in Circle), going home...");
+            setOtpStep("success");
+            navigate("/");
+            return;
           }
-          console.log("✅ Wallet initialized successfully");
-          setOtpStep("success");
-          navigate("/");
+          console.log("✅ Initializing wallet challenge...");
+          
+          const sdk = getSDK();
+          // Attendre que l'overlay OTP se ferme avant d'ouvrir l'overlay wallet
+          setTimeout(() => {
+            sdk.setAuthentication({ userToken, encryptionKey });
+            sdk.execute(walletData.challengeId, (err) => {
+             if (err) {
+               console.error("❌ Wallet execute error:", err);
+               setError("Wallet creation failed: " + err.message);
+               setOtpStep("sent");
+               return;
+             }
+             
+             console.log("✅ Wallet created in Circle! Linking to Mabble and minting welcome pack...");
+             setTimeout(() => {
+                fetch("http://localhost:4000/addWallet", {
+                  method: "POST",
+                  headers: {
+                    "Content-type" : "application/json",
+                    "Authorization" : `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify({ userToken }),
+                })
+                .then(r => r.json())
+                .then(addWalletData => {
+                  if (addWalletData.challengeId) {
+                     console.log("🎉 Executing Welcome Mint challenge...");
+                     sdk.setAuthentication({ userToken, encryptionKey });
+                     sdk.execute(addWalletData.challengeId, (mintErr) => {
+                         if (mintErr) console.error("❌ Mint error:", mintErr);
+                         else console.log("✅ Welcome pack minted successfully!");
+                         
+                         setOtpStep("success");
+                         navigate("/");
+                     });
+                  } else {
+                     setOtpStep("success");
+                     navigate("/");
+                  }
+                })
+                .catch(e => {
+                  console.error("❌ addWallet API error", e);
+                  setOtpStep("success");
+                  navigate("/");
+                });
+             }, 3000); // wait for Circle wallet propagation
+            }); // close sdk.execute
+          }, 1500); // wait for OTP overlay to close
         })
         .catch(e => {
           console.error("❌ Wallet initialization error:", e);

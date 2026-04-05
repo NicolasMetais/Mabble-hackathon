@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
 import Header from "./Header.jsx";
 
 const Profil = () => {
@@ -11,8 +12,16 @@ const Profil = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [requests, setRequests] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
+
+  const sdkRef = useRef(null);
+  useEffect(() => {
+    sdkRef.current = new W3SSdk({ appSettings: { appId: import.meta.env.VITE_CIRCLE_APP_ID } });
+  }, []);
 
   // Appel au backend au chargement de la page (seulement si connecté)
   useEffect(() => {
@@ -35,7 +44,6 @@ const Profil = () => {
 
         if (!res.ok) {
           if (res.status === 401) {
-            // Token expiré ou invalide
             Cookies.remove("authToken");
           }
           throw new Error("Erreur lors du chargement du profil");
@@ -43,6 +51,16 @@ const Profil = () => {
 
         const data = await res.json();
         setUser(data);
+
+        // Fetch Requests and Transactions simultaneously
+        const [reqRes, txRes] = await Promise.all([
+          fetch(`http://localhost:4000/requests/user/${data.id}`, { headers: {"Authorization": `Bearer ${token}`}}),
+          fetch(`http://localhost:4000/payment/transactions`, { headers: {"Authorization": `Bearer ${token}`}})
+        ]);
+
+        if (reqRes.ok) setRequests(await reqRes.json());
+        if (txRes.ok) setTransactions(await txRes.json());
+
       } catch (e) {
         setError(e.message);
       } finally {
@@ -52,6 +70,153 @@ const Profil = () => {
 
     fetchProfile();
   }, [navigate]);
+
+  const handleAccept = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:4000/requests/${id}/accept`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${Cookies.get("authToken")}` }
+      });
+      if (res.ok) {
+        alert("Demande acceptée !");
+        window.location.reload();
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const handlePay = async (reqObj) => {
+    const circleUserToken = Cookies.get("circleUserToken");
+    if (!circleUserToken) {
+       alert("Session de paiement expirée, veuillez vous reconnecter via la page login");
+       return;
+    }
+    try {
+      const payload = {
+        userToken: circleUserToken,
+        fromWalletAddress: user.wallet_address,
+        fromWalletID: user.wallet_id,
+        to: reqObj.provider_wallet,
+        USDCValue: parseFloat(reqObj.amountUSDC),
+        MBBLValue: parseFloat(reqObj.amountMBBL),
+        requestId: parseInt(reqObj.id)
+      };
+      
+      const res = await fetch("http://localhost:4000/payment/pay", {
+         method: "POST",
+         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Cookies.get("authToken")}` },
+         body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      console.log("[handlePay] backend response:", data);
+      if (!res.ok) {
+        alert("Erreur paiement: " + (data?.message || JSON.stringify(data)));
+        return;
+      }
+      const challengeId = data?.challengeId ?? data?.data?.challengeId;
+      if (challengeId) {
+         const encryptionKey = Cookies.get("encryptionKey");
+         sdkRef.current.setAuthentication({ userToken: circleUserToken, encryptionKey });
+         sdkRef.current.execute(challengeId, (err, result) => {
+            if (err) alert("Erreur SDK: " + err.message);
+            else { alert("Paiement initié avec succès ! Attente blockchain..."); window.location.reload(); }
+         });
+      } else {
+        console.error("[handlePay] pas de challengeId dans:", data);
+        alert("Erreur lors de l'initiation du paiement");
+      }
+    } catch(e) { console.error(e); alert("Erreur: " + e.message); }
+  };
+
+  const handleRelease = async (tx) => {
+    const circleUserToken = Cookies.get("circleUserToken");
+    const encryptionKey = Cookies.get("encryptionKey");
+    if (!circleUserToken) return alert("Session expirée, reconnectez-vous");
+    try {
+       const res = await fetch("http://localhost:4000/payment/release", {
+           method: "POST",
+           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Cookies.get("authToken")}` },
+           body: JSON.stringify({
+               _userToken: circleUserToken,
+               _userWalletID: user.wallet_id,
+               _paymentId: tx.payment_id
+           })
+       });
+       const data = await res.json();
+       console.log("[handleRelease] response:", data);
+       if (!res.ok) { alert("Erreur release: " + (data?.message || JSON.stringify(data))); return; }
+       const challengeId = data?.challengeId ?? data?.data?.challengeId;
+       if (challengeId) {
+           sdkRef.current.setAuthentication({ userToken: circleUserToken, encryptionKey });
+           sdkRef.current.execute(challengeId, (err, result) => {
+               if(err) alert("Erreur SDK: " + err.message);
+               else { alert("Fonds débloqués !"); window.location.reload(); }
+           });
+       } else {
+           alert("Erreur: pas de challengeId dans la réponse");
+       }
+    } catch(e) { console.error(e); alert("Erreur: " + e.message); }
+  };
+
+  const handleWithdraw = async (tx) => {
+    const circleUserToken = Cookies.get("circleUserToken");
+    const encryptionKey = Cookies.get("encryptionKey");
+    if (!circleUserToken) return alert("Session expirée, reconnectez-vous");
+    try {
+       const res = await fetch("http://localhost:4000/payment/withdraw", {
+           method: "POST",
+           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Cookies.get("authToken")}` },
+           body: JSON.stringify({
+               _userToken: circleUserToken,
+               _userWalletID: user.wallet_id,
+               _paymentId: String(tx.payment_id)
+           })
+       });
+       const data = await res.json();
+       console.log("[handleWithdraw] response:", data);
+       if (!res.ok) { alert("Erreur withdraw: " + (data?.message || JSON.stringify(data))); return; }
+       const challengeId = data?.challengeId ?? data?.data?.challengeId;
+       if (challengeId) {
+           sdkRef.current.setAuthentication({ userToken: circleUserToken, encryptionKey });
+           sdkRef.current.execute(challengeId, (err, result) => {
+               if(err) alert("Erreur SDK: " + err.message);
+               else { alert("Withdraw effectué !"); window.location.reload(); }
+           });
+       } else {
+           alert("Erreur: pas de challengeId dans la réponse");
+       }
+    } catch(e) { console.error(e); alert("Erreur: " + e.message); }
+  };
+
+  const handleDispute = async (tx) => {
+    const circleUserToken = Cookies.get("circleUserToken");
+    const encryptionKey = Cookies.get("encryptionKey");
+    if (!circleUserToken) return alert("Session expirée, reconnectez-vous");
+    if (!window.confirm("Êtes-vous sûr de vouloir ouvrir un conflit ? Cette action est irréversible.")) return;
+    try {
+      const res = await fetch("http://localhost:4000/payment/dispute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Cookies.get("authToken")}` },
+        body: JSON.stringify({
+          userToken: circleUserToken,
+          fromWalletId: user.wallet_id,
+          paymentId: String(tx.payment_id),
+        })
+      });
+      const data = await res.json();
+      console.log("[handleDispute] response:", data);
+      if (!res.ok) { alert("Erreur conflit: " + (data?.message || JSON.stringify(data))); return; }
+      const challengeId = data?.challengeId ?? data?.data?.challengeId;
+      if (challengeId) {
+        sdkRef.current.setAuthentication({ userToken: circleUserToken, encryptionKey });
+        sdkRef.current.execute(challengeId, (err, result) => {
+          if (err) alert("Erreur SDK: " + err.message);
+          else { alert("Conflit ouvert ! Les arbitres ont été notifiés."); window.location.reload(); }
+        });
+      } else {
+        alert("Erreur: pas de challengeId dans la réponse conflit");
+      }
+    } catch(e) { console.error(e); alert("Erreur: " + e.message); }
+  };
 
   const styles = {
     page: {
@@ -389,6 +554,110 @@ const Profil = () => {
           </div>
 
           <div style={styles.divider} />
+
+          {/* Listes API */}
+          <div style={{ marginTop: 40, marginBottom: 40 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, borderBottom: "1px solid #ddd", paddingBottom: 10 }}>Mes Demandes</h2>
+            {requests.length === 0 ? (
+              <p style={{ color: "#888" }}>Aucune demande en cours.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 20 }}>
+                {requests.map(req => {
+                  // Cherche une transaction liée à cette demande
+                  const linkedTx = transactions.find(tx => tx.request_id === req.id);
+                  const isPaid = !!linkedTx;
+                  const txStatus = linkedTx?.payment_status;
+                  const isClient = req.client_id === user?.id;
+                  const isProvider = req.provider_id === user?.id;
+
+                  return (
+                  <div key={`req-${req.id}`} style={{ border: "1px solid #eee", padding: 15, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <strong>Achat #{req.id} • Service #{req.service_id}</strong>
+                      <p style={{ margin: "5px 0", fontSize: 14 }}>{req.description}</p>
+                      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                        <span style={{ fontSize: 13, background: "#f0f0f0", padding: "4px 8px", borderRadius: 4 }}>
+                          Statut : {isPaid ? txStatus : req.request_status}
+                        </span>
+                        <span style={{ fontSize: 13, background: "#e0e7ff", color: "#3730a3", padding: "4px 8px", borderRadius: 4, fontWeight: "500" }}>
+                          Prix : {req.amountMBBL} MBBL / {req.amountUSDC} USDC
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {/* Provider : accepter la demande */}
+                      {isProvider && req.request_status === 'pending' && (
+                        <button onClick={() => handleAccept(req.id)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#000", color: "#fff", cursor: "pointer" }}>Accepter</button>
+                      )}
+
+                      {/* Client : payer si accepté et pas encore payé */}
+                      {isClient && req.request_status === 'accepted' && !isPaid && (
+                        <button onClick={() => handlePay(req)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#6366f1", color: "#fff", cursor: "pointer" }}>
+                          Payer {req.amountUSDC} USDC
+                        </button>
+                      )}
+
+                      {/* Client : fonds en escrow → Release + Conflit */}
+                      {isClient && isPaid && txStatus === 'working' && (
+                        <>
+                          <button onClick={() => handleRelease(linkedTx)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#2dd4a8", color: "#fff", cursor: "pointer" }}>
+                            ✅ Valider & Release
+                          </button>
+                          <button onClick={() => handleDispute(linkedTx)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#ef4444", color: "#fff", cursor: "pointer" }}>
+                            ⚠️ Conflit
+                          </button>
+                        </>
+                      )}
+
+                      {/* Provider : retirer les fonds si released */}
+                      {isProvider && isPaid && txStatus === 'withdrawable' && (
+                        <button onClick={() => handleWithdraw(linkedTx)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#6366f1", color: "#fff", cursor: "pointer" }}>
+                          💸 Withdraw
+                        </button>
+                      )}
+
+                      {/* Statut terminé */}
+                      {isPaid && (txStatus === 'finished' || txStatus === 'conflict') && (
+                        <span style={{ fontSize: 13, padding: "10px 16px", borderRadius: "8px", background: txStatus === 'conflict' ? "#fef3c7" : "#d1fae5", color: txStatus === 'conflict' ? "#92400e" : "#065f46" }}>
+                          {txStatus === 'conflict' ? '⚖️ Arbitrage en cours' : '✓ Terminé'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 40, marginBottom: 40 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, borderBottom: "1px solid #ddd", paddingBottom: 10 }}>Transactions en cours</h2>
+            {transactions.length === 0 ? (
+              <p style={{ color: "#888" }}>Aucune transaction.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 20 }}>
+                {transactions.map(tx => (
+                  <div key={`tx-${tx.payment_id}`} style={{ border: "1px solid #eee", padding: 15, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <strong>Tx: {String(tx.payment_id).slice(0,10)}...</strong>
+                      <p style={{ margin: "5px 0", fontSize: 14 }}>{tx.amountMBBL} MBBL / {tx.amountUSDC} USDC</p>
+                      <span style={{ fontSize: 13, background: "#f0f0f0", padding: "4px 8px", borderRadius: 4 }}>
+                        Status : {tx.payment_status}
+                      </span>
+                    </div>
+                    <div>
+                      {tx.client_id === user?.id && tx.payment_status === 'working' && (
+                        <button onClick={() => handleRelease(tx)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#2dd4a8", color: "#fff", cursor: "pointer" }}>Release</button>
+                      )}
+                      {tx.provider_id === user?.id && tx.payment_status === 'withdrawable' && (
+                        <button onClick={() => handleWithdraw(tx)} style={{ padding: "10px 16px", borderRadius: "8px", border: "none", background: "#6366f1", color: "#fff", cursor: "pointer" }}>Withdraw</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Bottom Cards */}

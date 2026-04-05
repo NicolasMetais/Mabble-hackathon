@@ -58,8 +58,14 @@ export class PaymentService {
             }),
         });
         const data: any = await response.json();
+        console.log('[payment/pay] microservice response:', JSON.stringify(data));
         if (!response.ok)
-            throw new BadRequestException(data?.error ?? 'Payment microservice error');
+            throw new BadRequestException(data?.error ?? data?.message ?? 'Payment microservice error');
+
+        // Normaliser challengeId (Circle retourne { data: { challengeId } })
+        const challengeId = data?.challengeId ?? data?.data?.challengeId;
+        if (!challengeId)
+            throw new BadRequestException(`No challengeId in payment response: ${JSON.stringify(data)}`);
 
         // 4. Stocker le mapping (requestId, from_wallet, to_wallet) pour l'event on-chain
         await this.pool.query(
@@ -67,7 +73,7 @@ export class PaymentService {
             [dto.requestId, clientWallet, provider_wallet],
         );
 
-        return data; // { challengeId }
+        return { challengeId }; // normalisé pour le frontend
     }
 
     // ----------------------------------------------------------------
@@ -266,18 +272,51 @@ export class PaymentService {
     }
 
     // ----------------------------------------------------------------
+    // POST /payment/releaseFund (action client — débloquer les fonds)
+    // ----------------------------------------------------------------
+    async releaseFund(userId: string, dto: WithdrawDto) {
+        console.log('[payment/releaseFund] userId:', userId, 'dto:', dto);
+        const response = await fetch(`${PAYMENTS_URL}/releaseFund`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                _userWalletID: dto._userWalletID,
+                _userToken: dto._userToken,
+                _paymentId: dto._paymentId,
+            }),
+        });
+        const data: any = await response.json();
+        console.log('[payment/releaseFund] microservice response:', JSON.stringify(data));
+        if (!response.ok)
+            throw new BadRequestException(data?.error ?? 'ReleaseFund microservice error');
+        const challengeId = data?.challengeId ?? data?.data?.challengeId;
+        if (!challengeId)
+            throw new BadRequestException(`No challengeId in releaseFund response: ${JSON.stringify(data)}`);
+        return { challengeId };
+    }
+
+    // ----------------------------------------------------------------
     // POST /payment/withdraw
     // ----------------------------------------------------------------
     async withdraw(userId: string, dto: WithdrawDto) {
+        console.log('[payment/withdraw] userId:', userId, 'dto:', dto);
         const response = await fetch(`${PAYMENTS_URL}/withdraw`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dto),
+            body: JSON.stringify({
+                _userWalletID: dto._userWalletID,
+                _userToken: dto._userToken,
+                _paymentId: dto._paymentId,
+            }),
         });
         const data: any = await response.json();
+        console.log('[payment/withdraw] microservice response:', JSON.stringify(data));
         if (!response.ok)
             throw new BadRequestException(data?.error ?? 'Withdraw microservice error');
-        return data; // { challengeId }
+        const challengeId = data?.challengeId ?? data?.data?.challengeId;
+        if (!challengeId)
+            throw new BadRequestException(`No challengeId in withdraw response: ${JSON.stringify(data)}`);
+        return { challengeId };
     }
 
     // ----------------------------------------------------------------

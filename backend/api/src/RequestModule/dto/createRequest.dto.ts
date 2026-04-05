@@ -1,15 +1,12 @@
-import { ValidateIf, IsOptional, IsInt, IsString, IsArray, IsUrl } from 'class-validator'
+import { ValidateIf, IsOptional, IsNumber, IsString, IsArray, IsUrl } from 'class-validator'
 
 export class CreateRequestDto {
-    @IsInt()
-    jobs_id: number;
-
     @IsString()
     description: string;
 
-    @IsInt()
+    @IsNumber()
     amountMBBL: number;
 
-    @IsInt()
+    @IsNumber()
     amountUSDC: number;
 }

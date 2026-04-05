@@ -1,9 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import Cookies from "js-cookie";
 
 const Search = () => {
-  const [searchQuery, setSearchQuery] = useState("Motion designer");
+  const [searchQuery, setSearchQuery] = useState("");
   const [hoveredCard, setHoveredCard] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [cards, setCards] = useState([]);
+  const [collaborateModal, setCollaborateModal] = useState(null);
+  const [requestDesc, setRequestDesc] = useState("");
 
   const row1Ref = useRef(null);
   const row2Ref = useRef(null);
@@ -23,24 +27,64 @@ const Search = () => {
   const skills = ["Blender", "Cinema 4D", "Z Brush", "Substance"];
   const filters = ["All Categories", "Any Credits", "Any Rating", "Any Availability"];
 
-  const cards = Array.from({ length: 5 }, (_, i) => ({
-    id: i,
-    name: "Marcus Johnson",
-    role: "3D artist",
-    bio: "Creating immersive 3D experiences that wow",
-    rating: 4.8,
-    reviews: 32,
-    credits: 12,
-    available: true,
-    skills,
-  }));
+  useEffect(() => {
+    fetch("http://localhost:4000/services/all")
+      .then((res) => res.json())
+      .then((data) => {
+        const mappedCards = data.map((service) => ({
+          id: service.id,
+          name: `${service.first_name || "Mabble"} ${service.last_name || "User"}`.trim(),
+          role: service.role || "Service Provider",
+          bio: service.description || "Creating amazing experiences that wow",
+          rating: 5.0,
+          reviews: 0,
+          amountUSDC: service.amountUSDC || 0,
+          amountMBBL: service.amountMBBL || 0,
+          available: service.is_active,
+          skills: skills,
+        }));
+        setCards(mappedCards);
+      })
+      .catch(console.error);
+  }, []);
 
   const rows = [
     { id: "row1", ref: row1Ref, cards },
-    { id: "row2", ref: row2Ref, cards },
-    { id: "row3", ref: row3Ref, cards },
-    { id: "row4", ref: row4Ref, cards },
   ];
+
+  const handleSendRequest = async () => {
+    try {
+      const token = Cookies.get("authToken");
+      if (!token) {
+        alert("Veuillez vous connecter pour envoyer une demande !");
+        return;
+      }
+      const res = await fetch(`http://localhost:4000/requests/service/${collaborateModal.id}`, {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          description: requestDesc,
+          amountMBBL: parseFloat(collaborateModal.amountMBBL) || 0,
+          amountUSDC: parseFloat(collaborateModal.amountUSDC) || 0
+        })
+      });
+
+      if (res.ok) {
+        alert("Demande de collaboration envoyée au prestataire !");
+        setCollaborateModal(null);
+        setRequestDesc("");
+      } else {
+        const err = await res.json();
+        alert("Erreur : " + err.message);
+      }
+    } catch(e) {
+      console.error(e);
+      alert("Erreur de connexion serveur.");
+    }
+  };
 
   const s = {
     page: {
@@ -387,7 +431,7 @@ const Search = () => {
               {card.rating}{" "}
               <span style={{ color: "#aaa" }}>({card.reviews} reviews)</span>
             </div>
-            <div style={s.cardCredits}>{card.credits} Credits</div>
+            <div style={s.cardCredits}>{card.amountUSDC} USDC / {card.amountMBBL} MBBL</div>
           </div>
           <div style={s.cardActions}>
             <button
@@ -397,6 +441,7 @@ const Search = () => {
               }}
               onMouseEnter={() => setHoveredBtn(`${key}-collab`)}
               onMouseLeave={() => setHoveredBtn(null)}
+              onClick={() => setCollaborateModal(card)}
             >
               Collaborate
             </button>
@@ -456,7 +501,7 @@ const Search = () => {
 
         {/* Results header */}
         <div style={s.resultsHeader}>
-          <span style={s.resultsCount}>152 creatives found</span>
+          <span style={s.resultsCount}>{cards.length} creatives found</span>
           <button style={s.sortBtn}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -496,6 +541,51 @@ const Search = () => {
           </div>
         ))}
       </div>
+
+      {collaborateModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000
+        }}>
+          <div style={{
+            background: "#fff", padding: "30px", borderRadius: "12px", width: "400px", maxWidth: "90%",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.2)", fontFamily: s.page.fontFamily
+          }}>
+            <h2 style={{ marginTop: 0, fontSize: "20px" }}>Collaborate with {collaborateModal.name}</h2>
+            <p style={{ color: "#666", fontSize: "14px", marginBottom: "15px" }}>
+              Décrivez vos besoins pour le projet :
+            </p>
+            <textarea
+              value={requestDesc}
+              onChange={(e) => setRequestDesc(e.target.value)}
+              placeholder="Ex: J'ai besoin d'un logo..."
+              style={{
+                width: "100%", height: "100px", padding: "10px", borderRadius: "8px", 
+                border: "1px solid #ccc", boxSizing: "border-box", marginBottom: "20px",
+                fontFamily: "inherit"
+              }}
+            />
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => setCollaborateModal(null)} 
+                style={{ padding: "10px 16px", borderRadius: "8px", border: "1px solid #ccc", background: "#fff", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSendRequest}
+                disabled={!requestDesc}
+                style={{
+                  padding: "10px 16px", borderRadius: "8px", border: "none",
+                  background: requestDesc ? "#000" : "#ccc", color: "#fff", cursor: requestDesc ? "pointer" : "not-allowed"
+                }}
+              >
+                Send Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

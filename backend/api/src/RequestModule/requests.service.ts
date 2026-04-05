@@ -9,15 +9,13 @@ export class RequestsService {
 
    async createRequest(service_id: number, userId: string, dto : CreateRequestDto) {
         const service = await this.pool.query(
-            'SELECT user_id, price, is_active FROM services WHERE id = $1',
+            'SELECT user_id, is_active FROM services WHERE id = $1',
             [service_id],
         );
         if (service.rowCount === 0)
             throw new NotFoundException('Service not found');
 
-        const { user_id, price, is_active } = service.rows[0];
-        if (!is_active)
-            throw new BadRequestException('Service not avalaible');
+        const { user_id, is_active } = service.rows[0];
         if (user_id === userId)
             throw new BadRequestException('You cannot request your own service bruh');
         await this.pool.query(
@@ -126,7 +124,7 @@ export class RequestsService {
 
     async getRequest(request_id: number) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
+            `SELECT rs.id, rs.request_status, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, provider.wallet_address AS provider_wallet, rs.service_id, rs.description, rs.amountmbbl AS "amountMBBL", rs.amountusdc AS "amountUSDC"
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id
@@ -141,7 +139,7 @@ export class RequestsService {
 
     async getUserRequests(userId: string) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
+            `SELECT rs.id, rs.request_status, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, provider.wallet_address AS provider_wallet, rs.service_id, rs.description, rs.amountmbbl AS "amountMBBL", rs.amountusdc AS "amountUSDC"
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id
@@ -155,7 +153,7 @@ export class RequestsService {
 
     async getServiceRequests(service_id: number) {
         const res = await this.pool.query(
-            `SELECT rs.id, rs.request_status, rs.client_confirm, rs.provider_confirm, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, rs.service_id, rs.description, rs.amountMBBL, rs.amountUSDC
+            `SELECT rs.id, rs.request_status, rs.client_id, client.first_name AS client_first_name, client.last_name AS client_last_name, s.user_id AS provider_id, provider.first_name AS provider_first_name, provider.last_name AS provider_last_name, provider.wallet_address AS provider_wallet, rs.service_id, rs.description, rs.amountmbbl AS "amountMBBL", rs.amountusdc AS "amountUSDC"
             FROM request_services AS rs
             JOIN services AS s ON rs.service_id = s.id
             JOIN users AS client ON rs.client_id = client.id

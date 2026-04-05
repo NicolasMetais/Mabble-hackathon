@@ -117,14 +117,27 @@ export class AuthService {
                   "Content-type": "application/json"
             },
             body: JSON.stringify({
-                "userToken": dto.userToken,
+                action: "getWallet",
+                userToken: dto.userToken,
             })
         });
         if (!res.ok)
             throw new BadRequestException("Error fetching the wallet");
-        const data = await res.json() as AddWallet;
+        const rawData = await res.json() as any;
+        console.log('[addWallet] getWallet raw response:', JSON.stringify(rawData));
+        
+        // Le microservice retourne { wallet: { data: { wallets: [...] } } }
+        const wallets = rawData.wallet?.data?.wallets || rawData.wallet?.wallets || rawData.wallets || [];
+        const firstWallet = Array.isArray(wallets) ? wallets[0] : rawData.wallet;
+        if (!firstWallet?.id)
+            throw new BadRequestException("No wallet found for this user");
+        
+        const walletId = firstWallet.id;
+        const walletAddress = firstWallet.address;
+        console.log('[addWallet] saving wallet:', { walletId, walletAddress });
+        
         await this.pool.query(`UPDATE "users" SET wallet_id = $1, wallet_address = $2 WHERE id = $3`,
-            [data.walletId, data.walletAddress , userId],
+            [walletId, walletAddress, userId],
         )
 
         const welcome = await fetch("http://payments:4001/welcome", {
@@ -133,14 +146,21 @@ export class AuthService {
                 "Content-type" : "application/json",
             },
             body :JSON.stringify({
-                _userWalletAddress: data.walletAddress,
-                _userWalletID: data.walletId,
+                _userWalletAddress: walletAddress,
+                _userWalletID: walletId,
                 _userToken : dto.userToken
             })
         })
         if (!welcome.ok)
             throw new BadRequestException('Process failed');
-        return { success: true, message : "Wallet Created" };
+        const welcomeData = await welcome.json() as any;
+        console.log('[addWallet] welcome response:', JSON.stringify(welcomeData));
+        // Circle peut retourner challengeId sous différentes formes
+        const challengeId = welcomeData.challengeId 
+            || welcomeData.data?.challengeId 
+            || welcomeData.challengeID
+            || welcomeData.data?.challengeID;
+        return { success: true, message : "Wallet Created", challengeId };
     };
 
     async getWallet(userId: string) {

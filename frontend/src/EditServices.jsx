@@ -62,18 +62,19 @@ const EditServices = () => {
         body: JSON.stringify({
           jobs_id: parseInt(formData.jobs_id),
           description: formData.description,
-          amountMBBL: parseInt(formData.amountMBBL),
-          amountUSDC: parseInt(formData.amountUSDC)
+          amountMBBL: parseFloat(formData.amountMBBL),
+          amountUSDC: parseFloat(formData.amountUSDC)
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to add service");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.message ? JSON.stringify(errData.message) : "Failed to add service");
       }
 
       setFormData({ jobs_id: "", description: "", amountMBBL: "", amountUSDC: "" });
       setShowForm(false);
-      fetchServices(); // Refresh list
+      fetchServices();
     } catch (e) {
       setError(e.message);
     }

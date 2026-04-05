@@ -1,4 +1,4 @@
-import { ValidateIf, IsOptional, IsInt, IsString, IsArray, IsUrl } from 'class-validator'
+import { IsOptional, IsInt, IsString, IsNumber } from 'class-validator'
 
 export class CreateServiceDto {
     @IsInt()
@@ -7,9 +7,9 @@ export class CreateServiceDto {
     @IsString()
     description: string;
 
-    @IsInt()
+    @IsNumber()
     amountMBBL: number;
 
-    @IsInt()
+    @IsNumber()
     amountUSDC: number;
 }

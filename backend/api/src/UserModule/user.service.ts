@@ -75,7 +75,7 @@ export class UserService {
     //pour voir son propre profil
     async getUserById(userId : string) {
         const res = await this.pool.query(
-            `SELECT u.id, u.email, u.first_name, u.last_name, u.wallet_address, j.name AS job_name 
+            `SELECT u.id, u.email, u.first_name, u.last_name, u.wallet_id, u.wallet_address, j.name AS job_name 
             FROM users AS u
             LEFT JOIN jobs AS j ON u.jobs_id = j.id
             WHERE u.id = $1`,

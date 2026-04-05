@@ -39,6 +39,12 @@ export class PaymentController {
         return this.paymentService.withdraw(req.user.userId, dto);
     }
 
+    // Exposé au front — JWT requis (client déclenche le releaseFund on-chain)
+    @Post('release')
+    async release(@Req() req: any, @Body() dto: WithdrawDto) {
+        return this.paymentService.releaseFund(req.user.userId, dto);
+    }
+
     @Post('vote')
     async vote(@Req() req: any, @Body() dto: VoteDto) {
         return this.paymentService.vote(req.user.userId, dto);
