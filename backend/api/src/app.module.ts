@@ -9,6 +9,7 @@ import { JwtAuthGuard } from './jwt.guard';
 import { UserModule } from './UserModule/user.module';
 import { PaymentModule } from './PaymentModule/payment.module';
 import { RequestsModule } from './RequestModule/requests.module';
+import { ServicesModule } from './ServicesModule/services.module';
 
 
 @Module({
@@ -19,6 +20,7 @@ import { RequestsModule } from './RequestModule/requests.module';
     UserModule,
     PaymentModule,
     RequestsModule,
+    ServicesModule,
     ConfigModule.forRoot({ isGlobal: true })
   ],
   providers: [

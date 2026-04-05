@@ -10,7 +10,7 @@ export default function Header() {
         <div style={styles.navLinks}>
           <NavLink to="/apply" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>Browse</NavLink>
           <NavLink to="/" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>How it works</NavLink>
-          <NavLink to="/profil" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>Home</NavLink>
+          <NavLink to="/profil" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>Profil</NavLink>
           <NavLink to="/search" style={({ isActive }) => isActive ? { ...styles.link, ...styles.active } : styles.link}>Search talents</NavLink>
         </div>
         <div>

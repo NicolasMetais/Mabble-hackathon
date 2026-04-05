@@ -10,10 +10,10 @@ import { CreateRequestDto } from './dto/createRequest.dto';
 export class ServicesController {
     constructor(private readonly ServicesManager: ServicesManager) {}
 
-    // @Get()
-    // async getServices(@Query() dto: GetServiceDto) {
-    //     //eventuellement la fonction recherche ici fo reflechir
-    // };
+    @Get()
+    async getUserServices(@Req() req: any) {
+        return this.ServicesManager.getUserServices(req.user.userId);
+    };
 
     @Post()
     async createService(@Req() req: any, @Body() dto: CreateServiceDto) {

@@ -22,6 +22,14 @@ export class ServicesManager {
         return { "success" : true };
     };
 
+    async getUserServices(userId: string) {
+        const res = await this.pool.query(
+            'SELECT * FROM services WHERE user_id = $1', [userId],
+        );
+        console.log(res.rows);
+        return res.rows;
+    };
+
     async getAService(id: number) {
         const res = await this.pool.query(
             'SELECT * FROM services WHERE id = $1', [id],

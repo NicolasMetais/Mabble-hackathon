@@ -10,6 +10,7 @@ import Profil from "./Profil.jsx";
 import Search from "./Search.jsx";
 import CreateAccount from "./CreateAccount.jsx";
 import Login from "./ApplyPage/Login.jsx";
+import EditServices from "./EditServices.jsx";
 import { Routes, Route } from "react-router-dom";
 import FooterApplyPage from "./FooterApplyPage.jsx";
 
@@ -24,6 +25,7 @@ function App() {
         <Route path="/search" element={<Search />} />
         <Route path="/form" element={<Form />} />
         <Route path="/profil" element={<Profil />} />
+        <Route path="/edit-services" element={<EditServices />} />
         <Route path="/create-account" element={<CreateAccount />} />
       </Routes>
       <FooterApplyPage />
