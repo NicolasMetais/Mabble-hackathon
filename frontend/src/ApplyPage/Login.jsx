@@ -5,14 +5,10 @@ import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk"
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 
-let sdkInstance = null;
-function getSDK(onLoginComplete) {
-  if(!sdkInstance) {
-    sdkInstance = new W3SSdk({
-      appSettings: { appId: import.meta.env.VITE_CIRCLE_APP_ID}
-    }, onLoginComplete);
-  }
-  return sdkInstance;
+function createSDK(onLoginComplete) {
+  return new W3SSdk({
+    appSettings: { appId: import.meta.env.VITE_CIRCLE_APP_ID }
+  }, onLoginComplete);
 }
 
 export default function Login() {
@@ -90,7 +86,7 @@ export default function Login() {
           }
           console.log("✅ Initializing wallet challenge...");
           
-          const sdk = getSDK();
+          const sdk = sdkRef.current;
           // Attendre que l'overlay OTP se ferme avant d'ouvrir l'overlay wallet
           setTimeout(() => {
             sdk.setAuthentication({ userToken, encryptionKey });
@@ -145,7 +141,7 @@ export default function Login() {
         });
     };
 
-    const sdk = getSDK(onLoginComplete);
+    const sdk = createSDK(onLoginComplete);
     sdkRef.current = sdk;
   }, []);
 
@@ -231,6 +227,18 @@ export default function Login() {
       setOtpStep("verifying");
       console.log("🚀 Calling sdk.verifyOtp()");
       sdk.verifyOtp();
+
+      // Timeout de secours : si le SDK ne répond pas en 30s, débloquer l'UI
+      setTimeout(() => {
+        setOtpStep(prev => {
+          if (prev === "verifying") {
+            console.warn("⏰ OTP verification timeout, resetting...");
+            setError("OTP verification timeout — réessayez");
+            return "sent";
+          }
+          return prev;
+        });
+      }, 30000);
 
     } catch (e) {
       console.error("❌ Error:", e);
