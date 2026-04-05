@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const CreateAccount = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -281,8 +283,8 @@ const CreateAccount = () => {
           return;
         }
 
-        const data = await res.json();
-        console.log("Account created: ", data);
+        await res.json();
+        navigate("/Login");
       } catch (err) {
         console.log(err);
       }
